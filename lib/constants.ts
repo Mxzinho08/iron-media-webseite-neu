@@ -38,7 +38,45 @@ export const PARTNERS = [
 ]
 
 export const NAV_ITEMS = [
-  { label: 'Leistungen', href: '#leistungen' },
+  { label: 'Services', href: '#services' },
+  { label: 'Case Studies', href: '#cases' },
   { label: 'Über uns', href: '#about' },
-  { label: 'Kontakt', href: '#contact' },
+  { label: 'Team', href: '#team' },
+]
+
+export const INTRO_BRANDS = [
+  { name: 'SNOCKS', color: '#000000' },
+  { name: 'HOLY', color: '#1DB954' },
+  { name: 'PURELEI', color: '#C8A97E' },
+  { name: 'JUNGLÜCK', color: '#2D5016' },
+  { name: 'WATERDROP', color: '#00B4D8' },
+  { name: 'YFood', color: '#FF6B35' },
+  { name: 'PAUL HEWITT', color: '#1A1A1A' },
+  { name: 'KAPTEN & SON', color: '#1A1A1A' },
+  { name: 'ANKERKRAUT', color: '#C4232B' },
+  { name: 'KoRo', color: '#004D40' },
+  { name: 'ROSSMANN', color: '#E30613' },
+  { name: 'Bears With Benefits', color: '#FF69B4' },
+]
+
+export const TRUSTED_BRANDS = [
+  { name: 'SNOCKS', color: '#000' },
+  { name: 'PURELEI', color: '#C8A97E' },
+  { name: 'HOLY', color: '#1DB954' },
+  { name: 'WATERDROP', color: '#00B4D8' },
+  { name: 'YFood', color: '#FF6B35' },
+  { name: 'PAUL HEWITT', color: '#1A1A1A' },
+  { name: 'KoRo', color: '#004D40' },
+  { name: 'META', color: '#0081FB' },
+  { name: 'Google', color: '#4285F4' },
+  { name: 'Shopify', color: '#7AB55C' },
+  { name: 'TikTok', color: '#000000' },
+  { name: 'Klaviyo', color: '#000000' },
+]
+
+export const HERO_METRICS = [
+  { value: '€1B+', label: 'PORTFOLIO REVENUE' },
+  { value: '150+', label: 'BRANDS SKALIERT' },
+  { value: '12x', label: 'Ø ROAS' },
+  { value: '98%', label: 'CLIENT RETENTION' },
 ]

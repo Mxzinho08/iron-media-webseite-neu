@@ -1,12 +1,13 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { NAV_ITEMS } from '@/lib/constants'
 
-// ── Spring transition presets ──────────────────────────────────
+// ── Transition presets ─────────────────────────────────────────
 const springSnappy = { type: 'spring' as const, stiffness: 400, damping: 30 }
 const springGentle = { type: 'spring' as const, stiffness: 300, damping: 25 }
+const easeSmoothOut = [0.22, 1, 0.36, 1] as const
 
 // ── Logo Bar Component ─────────────────────────────────────────
 function LogoBars({ hovered }: { hovered: boolean }) {
@@ -35,7 +36,7 @@ function LogoBars({ hovered }: { hovered: boolean }) {
   )
 }
 
-// ── Nav Link with hover underline ──────────────────────────────
+// ── Nav Link with animated underline ───────────────────────────
 function NavLink({
   label,
   href,
@@ -53,41 +54,42 @@ function NavLink({
     <motion.a
       href={href}
       onClick={onClick}
-      initial={{ opacity: 0, y: -6 }}
+      initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.15 + index * 0.05, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.5, delay: 0.15 + index * 0.06, ease: easeSmoothOut }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         position: 'relative',
-        fontFamily: 'var(--font-body)',
+        fontFamily: 'var(--font-display)',
         fontSize: 14,
-        fontWeight: 500,
-        color: hovered ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
+        fontWeight: 400,
+        color: hovered ? '#1A1A2E' : '#4A5568',
         textDecoration: 'none',
-        transition: 'color 0.25s ease',
+        transition: 'color 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
         paddingBottom: 4,
       }}
     >
       {label}
-      <motion.span
-        animate={{ width: hovered ? '100%' : '0%' }}
-        transition={{ duration: 0.25, ease: 'easeInOut' }}
+      <span
         style={{
           position: 'absolute',
-          bottom: -4,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          height: 2,
-          background: '#56B8DE',
+          bottom: 0,
+          left: 0,
+          width: '100%',
+          height: 1.5,
+          background: '#2E9AC4',
           borderRadius: 1,
+          transform: hovered ? 'scaleX(1)' : 'scaleX(0)',
+          transformOrigin: 'center',
+          transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       />
     </motion.a>
   )
 }
 
-// ── CTA Button with cursor-tracking spotlight + magnetic effect ─
+// ── CTA Button ─────────────────────────────────────────────────
 function CTAButton({
   onClick,
   style: styleProp,
@@ -95,89 +97,38 @@ function CTAButton({
   onClick?: () => void
   style?: React.CSSProperties
 }) {
-  const buttonRef = useRef<HTMLAnchorElement>(null)
-  const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
   const [isHovered, setIsHovered] = useState(false)
-  const [isPressed, setIsPressed] = useState(false)
-  const [magnetOffset, setMagnetOffset] = useState({ x: 0, y: 0 })
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLAnchorElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect()
-      // Spotlight position
-      setMousePos({
-        x: ((e.clientX - rect.left) / rect.width) * 100,
-        y: ((e.clientY - rect.top) / rect.height) * 100,
-      })
-      // Magnetic offset (±4px within element bounds)
-      const centerX = rect.left + rect.width / 2
-      const centerY = rect.top + rect.height / 2
-      const distX = e.clientX - centerX
-      const distY = e.clientY - centerY
-      const dist = Math.sqrt(distX * distX + distY * distY)
-      if (dist < 80) {
-        setMagnetOffset({
-          x: (distX / 80) * 4,
-          y: (distY / 80) * 4,
-        })
-      }
-    },
-    []
-  )
 
   return (
     <motion.a
-      ref={buttonRef}
       href="#contact"
       onClick={onClick}
-      onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false)
-        setIsPressed(false)
-        setMagnetOffset({ x: 0, y: 0 })
-      }}
-      onMouseDown={() => setIsPressed(true)}
-      onMouseUp={() => setIsPressed(false)}
+      onMouseLeave={() => setIsHovered(false)}
       animate={{
-        scale: isPressed ? 0.97 : isHovered ? 1.03 : 1,
-        x: magnetOffset.x,
-        y: magnetOffset.y,
+        y: isHovered ? -1 : 0,
       }}
-      transition={{ ...springSnappy, duration: isPressed ? 0.1 : undefined }}
+      transition={{ duration: 0.25, ease: easeSmoothOut }}
       style={{
-        position: 'relative',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '10px 24px',
-        background: isHovered ? '#56B8DE' : '#2E9AC4',
+        padding: '10px 20px',
+        background: isHovered ? '#2E9AC4' : '#1A1A2E',
         color: '#FFFFFF',
         borderRadius: 8,
-        fontFamily: 'var(--font-body)',
-        fontWeight: 500,
+        fontFamily: 'var(--font-display)',
+        fontWeight: 600,
         fontSize: 13,
         textDecoration: 'none',
         border: 'none',
         cursor: 'pointer',
-        overflow: 'hidden',
         whiteSpace: 'nowrap',
-        transition: 'background 0.3s ease',
+        transition: 'background 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
         ...styleProp,
       }}
     >
-      {/* Cursor-tracking spotlight */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          background: `radial-gradient(circle 80px at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,0.25), transparent 70%)`,
-          opacity: isHovered ? 1 : 0,
-          transition: 'opacity 0.2s ease',
-        }}
-      />
-      <span style={{ position: 'relative', zIndex: 1 }}>Projekt starten</span>
+      Kostenloses Audit
     </motion.a>
   )
 }
@@ -194,7 +145,7 @@ function HamburgerButton({
     display: 'block',
     width: 20,
     height: 1.5,
-    background: '#FFFFFF',
+    background: '#1A1A2E',
     borderRadius: 999,
   }
 
@@ -219,8 +170,8 @@ function HamburgerButton({
       <motion.span
         animate={
           isOpen
-            ? { rotate: 45, y: 6.5, background: '#FFFFFF' }
-            : { rotate: 0, y: 0, background: '#FFFFFF' }
+            ? { rotate: 45, y: 6.5, background: '#1A1A2E' }
+            : { rotate: 0, y: 0, background: '#1A1A2E' }
         }
         transition={springSnappy}
         style={lineStyle}
@@ -233,8 +184,8 @@ function HamburgerButton({
       <motion.span
         animate={
           isOpen
-            ? { rotate: -45, y: -6.5, background: '#FFFFFF' }
-            : { rotate: 0, y: 0, background: '#FFFFFF' }
+            ? { rotate: -45, y: -6.5, background: '#1A1A2E' }
+            : { rotate: 0, y: 0, background: '#1A1A2E' }
         }
         transition={springSnappy}
         style={lineStyle}
@@ -254,7 +205,6 @@ export default function Navigation() {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50)
     }
-    // Check initial state
     handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
@@ -276,7 +226,7 @@ export default function Navigation() {
 
   return (
     <>
-      {/* ── Full-Width Navigation Bar ──────────────────── */}
+      {/* ── Fixed Navigation Bar ──────────────────────── */}
       <nav
         style={{
           position: 'fixed',
@@ -284,120 +234,111 @@ export default function Navigation() {
           left: 0,
           right: 0,
           zIndex: 100,
-          height: 72,
-          background: scrolled ? 'rgba(10, 15, 30, 0.8)' : 'transparent',
-          backdropFilter: scrolled ? 'blur(20px) saturate(1.2)' : 'none',
-          WebkitBackdropFilter: scrolled ? 'blur(20px) saturate(1.2)' : 'none',
+          background: scrolled ? 'rgba(255, 255, 255, 0.8)' : 'transparent',
+          backdropFilter: scrolled ? 'blur(20px)' : 'none',
+          WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
           borderBottom: scrolled
-            ? '1px solid rgba(255, 255, 255, 0.08)'
+            ? '1px solid rgba(226, 232, 240, 0.5)'
             : '1px solid transparent',
-          transition: 'all 0.4s ease',
+          boxShadow: scrolled ? '0 1px 3px rgba(27, 126, 166, 0.04)' : 'none',
+          padding: '16px clamp(24px, 5vw, 80px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          transition: 'all 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
         }}
+        className="max-md:!px-6"
       >
-        <div
+        {/* ── Left: Logo ──────────────────────────────── */}
+        <motion.a
+          href="#"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.1, ease: easeSmoothOut }}
+          onMouseEnter={() => setLogoHovered(true)}
+          onMouseLeave={() => setLogoHovered(false)}
+          whileHover={{ scale: 1.04 }}
           style={{
-            maxWidth: 1200,
-            margin: '0 auto',
-            padding: '0 48px',
-            height: '100%',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            position: 'relative',
+            gap: 10,
+            textDecoration: 'none',
+            cursor: 'pointer',
+            flexShrink: 0,
           }}
-          className="max-md:!px-6"
         >
-          {/* ── Left: Logo ──────────────────────────────── */}
-          <motion.a
-            href="#"
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            onMouseEnter={() => setLogoHovered(true)}
-            onMouseLeave={() => setLogoHovered(false)}
-            whileHover={{ scale: 1.04 }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              textDecoration: 'none',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            <LogoBars hovered={logoHovered} />
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                lineHeight: 1,
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontWeight: 800,
-                  fontSize: 18,
-                  color: '#FFFFFF',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                IRON
-              </span>
-              <span
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontWeight: 400,
-                  fontSize: 10,
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  letterSpacing: '0.35em',
-                  textTransform: 'uppercase',
-                  marginTop: 1,
-                }}
-              >
-                MEDIA
-              </span>
-            </div>
-          </motion.a>
-
-          {/* ── Center: Nav Links (desktop only) ────────── */}
+          <LogoBars hovered={logoHovered} />
           <div
-            className="hidden md:flex"
             style={{
-              position: 'absolute',
-              left: '50%',
-              transform: 'translateX(-50%)',
               display: 'flex',
-              alignItems: 'center',
-              gap: 32,
+              flexDirection: 'column',
+              lineHeight: 1,
             }}
           >
-            {NAV_ITEMS.map((item, i) => (
-              <NavLink key={item.href} label={item.label} href={item.href} index={i} />
-            ))}
-          </div>
-
-          {/* ── Right: CTA (desktop) + Hamburger (mobile) ── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
-            <motion.div
-              className="hidden md:block"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: 0.2,
-                ease: [0.16, 1, 0.3, 1],
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: 18,
+                color: '#1A1A2E',
+                letterSpacing: '-0.02em',
               }}
             >
-              <CTAButton />
-            </motion.div>
+              IRON
+            </span>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 300,
+                fontSize: 10,
+                color: '#666666',
+                letterSpacing: '0.35em',
+                textTransform: 'uppercase',
+                marginTop: 1,
+              }}
+            >
+              MEDIA
+            </span>
+          </div>
+        </motion.a>
 
-            <div className="md:hidden">
-              <HamburgerButton
-                isOpen={mobileOpen}
-                toggle={() => setMobileOpen((v) => !v)}
-              />
-            </div>
+        {/* ── Center: Nav Links (desktop only) ────────── */}
+        <div
+          className="hidden md:flex"
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 32,
+          }}
+        >
+          {NAV_ITEMS.map((item, i) => (
+            <NavLink key={item.href} label={item.label} href={item.href} index={i} />
+          ))}
+        </div>
+
+        {/* ── Right: CTA (desktop) + Hamburger (mobile) ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+          <motion.div
+            className="hidden md:block"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{
+              duration: 0.5,
+              delay: 0.2 + NAV_ITEMS.length * 0.06,
+              ease: easeSmoothOut,
+            }}
+          >
+            <CTAButton />
+          </motion.div>
+
+          <div className="md:hidden">
+            <HamburgerButton
+              isOpen={mobileOpen}
+              toggle={() => setMobileOpen((v) => !v)}
+            />
           </div>
         </div>
       </nav>
@@ -419,7 +360,7 @@ export default function Navigation() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 0,
-              background: 'rgba(10, 10, 20, 0.95)',
+              background: 'rgba(255, 255, 255, 0.98)',
               backdropFilter: 'blur(24px)',
               WebkitBackdropFilter: 'blur(24px)',
             }}
@@ -444,18 +385,18 @@ export default function Navigation() {
                   exit={{ opacity: 0, y: 10 }}
                   transition={{ ...springGentle, delay: 0.05 + i * 0.07 }}
                   style={{
-                    fontFamily: 'var(--font-body)',
+                    fontFamily: 'var(--font-display)',
                     fontSize: 24,
                     fontWeight: 500,
-                    color: 'rgba(255,255,255,0.85)',
+                    color: '#1A1A2E',
                     textDecoration: 'none',
                     transition: 'color 0.2s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#FFFFFF'
+                    e.currentTarget.style.color = '#2E9AC4'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'rgba(255,255,255,0.85)'
+                    e.currentTarget.style.color = '#1A1A2E'
                   }}
                 >
                   {item.label}

@@ -43,8 +43,8 @@
   --shadow-glow: 0 0 40px rgba(46, 154, 196, 0.2), 0 0 80px rgba(86, 184, 222, 0.1);
 
   /* === TYPOGRAFIE === */
-  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-display: 'Sora', system-ui, sans-serif;
+  --font-body: 'Sora', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   /* Font Sizes */

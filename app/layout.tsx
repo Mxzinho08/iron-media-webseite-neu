@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google'
+import { Sora, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
-const plusJakarta = Plus_Jakarta_Sans({
+const sora = Sora({
   subsets: ['latin'],
   variable: '--font-display',
   display: 'swap',
-  weight: ['300', '400', '500', '600', '700', '800'],
+  weight: ['200', '300', '400', '500', '600', '700', '800'],
 })
 
 const jetbrainsMono = JetBrains_Mono({
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={`${plusJakarta.variable} ${jetbrainsMono.variable}`}>
+    <html lang="de" className={`${sora.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-white text-text-dark antialiased overflow-x-hidden">
         {children}
       </body>

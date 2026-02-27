@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 
 /* ============================================
-   IRON MEDIA — HERO v5.1
-   Left: Text Content | Right: Three.js Glass Panels
+   IRON MEDIA — HERO
+   Left: Text | Right: GLSL Glowing Glass Panels
    ============================================ */
 
 interface HeroProps {
@@ -13,200 +13,256 @@ interface HeroProps {
 }
 
 const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1]
-
-/* ---- Partner Logos (text-based, clean) ---- */
 const PARTNERS = ['Meta', 'Google', 'TikTok', 'Pinterest', 'Taboola']
 
 /* ============================================
-   THREE.JS GLASS PANELS
-   5 diagonal frosted-glass slabs with inner glow
+   GLSL SHADER — Glowing Frosted Glass Panels
    ============================================ */
-function GlassPanels() {
+
+const vertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+
+const fragmentShader = `
+  precision highp float;
+
+  varying vec2 vUv;
+  uniform float uTime;
+  uniform vec2 uResolution;
+  uniform vec2 uMouse;
+
+  // ── Value Noise ──
+  float hash(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
+  }
+
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
+
+  float fbm(vec2 p) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    for (int i = 0; i < 4; i++) {
+      value += amplitude * noise(p);
+      p *= 2.0;
+      amplitude *= 0.5;
+    }
+    return value;
+  }
+
+  void main() {
+    vec2 uv = vUv;
+    float aspect = uResolution.x / uResolution.y;
+
+    // ── Rotation animation ──
+    float rotAngle = sin(uTime * 0.28) * 0.06;
+    rotAngle += (uMouse.x - 0.5) * 0.02;
+    float rotY = sin(uTime * 0.21) * 0.04 + (uMouse.y - 0.5) * 0.015;
+
+    vec2 uvR = uv;
+    uvR.x += rotAngle * (uv.y - 0.5) * 0.5;
+    uvR.y += rotY * (uv.x - 0.5) * 0.3;
+
+    // ── Diagonal transform (~50 deg) ──
+    float diagAngle = -0.87;
+    float cosA = cos(diagAngle);
+    float sinA = sin(diagAngle);
+
+    vec2 uvC = uvR - vec2(0.5);
+    uvC.x *= aspect;
+
+    float diagX = uvC.x * cosA - uvC.y * sinA;
+    float diagY = uvC.x * sinA + uvC.y * cosA;
+
+    // ── Panel config ──
+    float panelWidth = 0.20;
+    float gapWidth = 0.015;
+    float totalStep = panelWidth + gapWidth;
+
+    float pCenters[5];
+    pCenters[0] = -2.0 * totalStep;
+    pCenters[1] = -1.0 * totalStep;
+    pCenters[2] =  0.0;
+    pCenters[3] =  1.0 * totalStep;
+    pCenters[4] =  2.0 * totalStep;
+
+    vec3 cols[5];
+    cols[0] = vec3(0.047, 0.208, 0.278); // #0C3547
+    cols[1] = vec3(0.106, 0.420, 0.541); // #1B6B8A
+    cols[2] = vec3(0.180, 0.604, 0.769); // #2E9AC4
+    cols[3] = vec3(0.337, 0.722, 0.871); // #56B8DE
+    cols[4] = vec3(0.106, 0.494, 0.651); // #1B7EA6
+
+    float glows[5];
+    glows[0] = 0.4;
+    glows[1] = 0.6;
+    glows[2] = 1.0;
+    glows[3] = 0.9;
+    glows[4] = 0.55;
+
+    // ── Noise texture ──
+    float grain = fbm(uvR * 250.0) * 0.12;
+    float fineGrain = noise(uvR * 500.0) * 0.06;
+    float totalGrain = grain + fineGrain;
+
+    // ── Render panels back to front ──
+    vec3 finalColor = vec3(1.0); // white bg
+
+    for (int i = 0; i < 5; i++) {
+      float dist = diagX - pCenters[i];
+      float halfW = panelWidth * 0.5;
+
+      float glowRadius = 0.08 + glows[i] * 0.04;
+      float glowDist = max(0.0, abs(dist) - halfW);
+      float halo = exp(-glowDist * glowDist / (glowRadius * glowRadius)) * glows[i] * 0.3;
+
+      // Shadow from next panel
+      float shadowFromNext = 0.0;
+      if (i < 4) {
+        shadowFromNext = smoothstep(halfW - gapWidth * 2.0, halfW, dist) * 0.4;
+      }
+
+      if (abs(dist) < halfW) {
+        float t = (dist + halfW) / panelWidth; // 0=left 1=right
+
+        // Cross-panel gradient: bright right, dark left
+        float brightness = mix(0.15 + glows[i] * 0.1, 0.85 + glows[i] * 0.15, t) * glows[i];
+
+        // Bright neon edge (right side)
+        float edgeGlow = smoothstep(0.92, 1.0, t) * 1.5;
+        brightness += edgeGlow;
+        brightness -= shadowFromNext;
+        brightness += totalGrain * brightness;
+
+        vec3 panelColor = cols[i] * brightness;
+        // Edge goes nearly white
+        panelColor = mix(panelColor, vec3(1.0), edgeGlow * 0.4);
+
+        finalColor = panelColor;
+      } else if (halo > 0.01) {
+        // Glow halo on background
+        finalColor = mix(finalColor, cols[i] * 0.7, halo);
+      }
+    }
+
+    // ── Shadow slits between panels ──
+    for (int i = 0; i < 4; i++) {
+      float gapCenter = pCenters[i] + panelWidth * 0.5 + gapWidth * 0.5;
+      float gapDist = abs(diagX - gapCenter);
+      float gapHalfW = gapWidth * 0.5;
+
+      if (gapDist < gapHalfW * 2.5) {
+        float shadowStrength = smoothstep(gapHalfW * 2.5, 0.0, gapDist) * 0.55;
+        finalColor *= (1.0 - shadowStrength);
+      }
+    }
+
+    // ── Soft vignette ──
+    float vig = 1.0 - smoothstep(0.3, 0.9, length(uvC / vec2(aspect * 0.7, 0.7)));
+    finalColor = mix(vec3(1.0), finalColor, vig * 0.3 + 0.7);
+
+    gl_FragColor = vec4(finalColor, 1.0);
+  }
+`
+
+/* ============================================
+   GLOWING PANELS COMPONENT
+   ============================================ */
+function GlowingPanels() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const mouseRef = useRef({ x: 0, y: 0 })
   const disposedRef = useRef(false)
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-
     disposedRef.current = false
+
     let animId = 0
     let renderer: any = null
+    let mouseX = 0.5
+    let mouseY = 0.5
 
     async function init() {
       const THREE = await import('three')
       if (disposedRef.current || !container) return
 
-      const width = container.clientWidth
-      const height = container.clientHeight
-      if (width === 0 || height === 0) return
+      const w = container.clientWidth
+      const h = container.clientHeight
+      if (w === 0 || h === 0) return
 
-      // ---- Renderer (no alpha — we draw our own white bg) ----
-      renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        powerPreference: 'high-performance',
-      })
+      const scene = new THREE.Scene()
+      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-      renderer.setSize(width, height)
+      renderer.setSize(w, h)
       renderer.setClearColor(0xFFFFFF, 1)
-      renderer.toneMapping = THREE.ACESFilmicToneMapping
-      renderer.toneMappingExposure = 1.4
       container.appendChild(renderer.domElement)
 
-      // ---- Scene ----
-      const scene = new THREE.Scene()
-      scene.background = new THREE.Color(0xFFFFFF)
-
-      // ---- Camera ----
-      const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 100)
-      camera.position.set(0, 0, 7)
-      camera.lookAt(0, 0, 0)
-
-      // ---- Lighting ----
-      // Main: strong directional from upper-right-front
-      const mainLight = new THREE.DirectionalLight(0xFFFFFF, 2.0)
-      mainLight.position.set(4, 5, 6)
-      scene.add(mainLight)
-
-      // Fill: colored from left
-      const fillLight = new THREE.DirectionalLight(0x56B8DE, 0.6)
-      fillLight.position.set(-4, 0, 4)
-      scene.add(fillLight)
-
-      // Back light: creates rim/edge highlight
-      const backLight = new THREE.DirectionalLight(0xFFFFFF, 0.8)
-      backLight.position.set(0, -2, -4)
-      scene.add(backLight)
-
-      // Ambient
-      const ambient = new THREE.AmbientLight(0xFFFFFF, 0.3)
-      scene.add(ambient)
-
-      // ---- Panel Dimensions ----
-      const panelW = 1.6
-      const panelH = 16 // tall — extends beyond viewport
-      const panelD = 0.06
-
-      const geo = new THREE.BoxGeometry(panelW, panelH, panelD, 1, 1, 1)
-
-      // ---- Panel Configs ----
-      const panels = [
-        { x: -3.0, color: 0x0E4D6E, emI: 0.8 },
-        { x: -1.5, color: 0x1B7EA6, emI: 1.0 },
-        { x:  0.0, color: 0x2E9AC4, emI: 1.2 },
-        { x:  1.5, color: 0x56B8DE, emI: 1.1 },
-        { x:  3.0, color: 0x3A8FB8, emI: 0.9 },
-      ]
-
-      const group = new THREE.Group()
-
-      // Edge geometry (thin bright strip on right side of each panel)
-      const edgeGeo = new THREE.BoxGeometry(0.035, panelH, panelD + 0.01)
-
-      panels.forEach(({ x, color, emI }) => {
-        // Panel material — frosted glowing glass
-        const mat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(color),
-          emissive: new THREE.Color(color),
-          emissiveIntensity: emI,
-          roughness: 0.3,
-          metalness: 0.05,
-          transparent: true,
-          opacity: 0.78,
-          side: THREE.FrontSide,
-        })
-
-        const mesh = new THREE.Mesh(geo, mat)
-        mesh.position.x = x
-        group.add(mesh)
-
-        // Bright edge (neon line on right side)
-        const edgeColor = new THREE.Color(color).lerp(new THREE.Color(0xFFFFFF), 0.7)
-        const edgeMat = new THREE.MeshBasicMaterial({
-          color: edgeColor,
-          transparent: true,
-          opacity: 0.85,
-        })
-        const edge = new THREE.Mesh(edgeGeo, edgeMat)
-        edge.position.x = x + panelW / 2 + 0.018
-        group.add(edge)
-
-        // Subtle dark gap on left side (shadow slit)
-        const gapGeo = new THREE.BoxGeometry(0.02, panelH, panelD + 0.005)
-        const gapMat = new THREE.MeshBasicMaterial({
-          color: 0x0A3040,
-          transparent: true,
-          opacity: 0.12,
-        })
-        const gap = new THREE.Mesh(gapGeo, gapMat)
-        gap.position.x = x - panelW / 2 - 0.01
-        group.add(gap)
-      })
-
-      // Diagonal orientation: ~50° from vertical
-      group.rotation.z = THREE.MathUtils.degToRad(-50)
-      scene.add(group)
-
-      // ---- Animation ----
-      const AMP = THREE.MathUtils.degToRad(4)
-      const PERIOD = 22
-      const clock = new THREE.Clock()
-
-      // ---- Mouse ----
-      const onMouseMove = (e: MouseEvent) => {
-        mouseRef.current.x = (e.clientX / window.innerWidth) * 2 - 1
-        mouseRef.current.y = (e.clientY / window.innerHeight) * 2 - 1
+      const uniforms = {
+        uTime: { value: 0 },
+        uResolution: { value: new THREE.Vector2(w, h) },
+        uMouse: { value: new THREE.Vector2(0.5, 0.5) },
       }
-      window.addEventListener('mousemove', onMouseMove)
 
-      // ---- Resize ----
+      const geo = new THREE.PlaneGeometry(2, 2)
+      const mat = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms })
+      scene.add(new THREE.Mesh(geo, mat))
+
+      // Mouse
+      const onMouse = (e: MouseEvent) => {
+        mouseX = e.clientX / window.innerWidth
+        mouseY = e.clientY / window.innerHeight
+      }
+      window.addEventListener('mousemove', onMouse)
+
+      // Resize
       let resizeTimer: ReturnType<typeof setTimeout>
       const onResize = () => {
         clearTimeout(resizeTimer)
         resizeTimer = setTimeout(() => {
           if (disposedRef.current || !container || !renderer) return
-          const w = container.clientWidth
-          const h = container.clientHeight
-          if (w === 0 || h === 0) return
-          camera.aspect = w / h
-          camera.updateProjectionMatrix()
-          renderer.setSize(w, h)
+          const nw = container.clientWidth
+          const nh = container.clientHeight
+          if (nw === 0 || nh === 0) return
+          renderer.setSize(nw, nh)
+          uniforms.uResolution.value.set(nw, nh)
         }, 150)
       }
       window.addEventListener('resize', onResize)
 
-      // ---- Render Loop ----
-      function tick() {
+      // Render loop
+      function tick(time: number) {
         if (disposedRef.current) return
         animId = requestAnimationFrame(tick)
-
-        const t = clock.getElapsedTime()
-
-        // Slow sinus ping-pong + subtle mouse influence
-        const tgtX = Math.sin(t * (2 * Math.PI / PERIOD)) * AMP + mouseRef.current.y * 0.015
-        const tgtY = Math.sin(t * (2 * Math.PI / (PERIOD * 1.3))) * AMP * 0.3 + mouseRef.current.x * 0.025
-
-        group.rotation.x += (tgtX - group.rotation.x) * 0.035
-        group.rotation.y += (tgtY - group.rotation.y) * 0.035
-
+        uniforms.uTime.value = time * 0.001
+        uniforms.uMouse.value.x += (mouseX - uniforms.uMouse.value.x) * 0.02
+        uniforms.uMouse.value.y += (mouseY - uniforms.uMouse.value.y) * 0.02
         renderer.render(scene, camera)
       }
-      tick()
+      animId = requestAnimationFrame(tick)
 
-      // ---- Cleanup fn ----
       return () => {
         cancelAnimationFrame(animId)
-        window.removeEventListener('mousemove', onMouseMove)
+        window.removeEventListener('mousemove', onMouse)
         window.removeEventListener('resize', onResize)
         clearTimeout(resizeTimer)
-        scene.traverse((obj: any) => {
-          if (obj.geometry) obj.geometry.dispose()
-          if (obj.material) {
-            if (Array.isArray(obj.material)) obj.material.forEach((m: any) => m.dispose())
-            else obj.material.dispose()
-          }
-        })
+        geo.dispose()
+        mat.dispose()
         renderer.dispose()
         if (container.contains(renderer.domElement)) {
           container.removeChild(renderer.domElement)
@@ -234,13 +290,14 @@ function GlassPanels() {
         width: '58%',
         height: '100%',
         zIndex: 0,
+        overflow: 'hidden',
       }}
     />
   )
 }
 
 /* ============================================
-   MAIN HERO
+   HERO COMPONENT
    ============================================ */
 export default function Hero({ introComplete }: HeroProps) {
   const [show, setShow] = useState(false)
@@ -274,10 +331,8 @@ export default function Hero({ introComplete }: HeroProps) {
         alignItems: 'center',
       }}
     >
-      {/* 3D Panels — desktop only */}
-      {!isMobile && <GlassPanels />}
+      {!isMobile && <GlowingPanels />}
 
-      {/* Mobile: subtle gradient fallback */}
       {isMobile && (
         <div
           style={{
@@ -291,7 +346,7 @@ export default function Hero({ introComplete }: HeroProps) {
         />
       )}
 
-      {/* ====== Text Content (left) ====== */}
+      {/* Text Content — left side */}
       <div
         style={{
           position: 'relative',
@@ -426,10 +481,8 @@ export default function Hero({ introComplete }: HeroProps) {
           >
             Kostenloses Audit starten
           </a>
-
           <a
             href="#cases"
-            className="hero-secondary-cta"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -494,7 +547,6 @@ export default function Hero({ introComplete }: HeroProps) {
             {PARTNERS.map((name) => (
               <span
                 key={name}
-                className="hero-partner"
                 style={{
                   fontFamily: 'var(--font-body)',
                   fontWeight: 700,

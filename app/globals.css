@@ -1,0 +1,210 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   IRON MEDIA — DESIGN SYSTEM v3.0
+   Premium White. Blue Accent. Clean Precision.
+   ============================================ */
+
+:root {
+  /* === PRIMARY COLORS (from Logo) === */
+  --sky-blue: #56B8DE;
+  --ocean-blue: #2E9AC4;
+  --deep-teal: #1B7EA6;
+
+  /* === GRADIENTS === */
+  --gradient-primary: linear-gradient(135deg, #56B8DE 0%, #1B7EA6 100%);
+  --gradient-horizontal: linear-gradient(90deg, #56B8DE 0%, #2E9AC4 50%, #1B7EA6 100%);
+  --gradient-radial: radial-gradient(circle at 30% 40%, rgba(86,184,222,0.12), rgba(46,154,196,0.08), transparent 70%);
+
+  /* === NEUTRALS === */
+  --white: #FFFFFF;
+  --off-white: #FAFCFE;
+  --light-gray: #F4F7FA;
+  --medium-gray: #E2E8F0;
+  --text-dark: #1A1A2E;
+  --text-medium: #4A5568;
+  --text-light: #94A3B8;
+  --text-muted: #CBD5E1;
+
+  /* === GLASS / GLOW === */
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(46, 154, 196, 0.12);
+  --glass-shadow: rgba(27, 126, 166, 0.08);
+  --glow-primary: rgba(46, 154, 196, 0.25);
+  --glow-light: rgba(86, 184, 222, 0.20);
+
+  /* === SHADOWS === */
+  --shadow-sm: 0 1px 3px rgba(27, 126, 166, 0.06);
+  --shadow-md: 0 4px 16px rgba(27, 126, 166, 0.08);
+  --shadow-lg: 0 12px 40px rgba(27, 126, 166, 0.12);
+  --shadow-xl: 0 24px 64px rgba(27, 126, 166, 0.16);
+  --shadow-glow: 0 0 40px rgba(46, 154, 196, 0.2), 0 0 80px rgba(86, 184, 222, 0.1);
+
+  /* === TYPOGRAFIE === */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Font Sizes */
+  --text-hero: clamp(52px, 8vw, 108px);
+  --text-hero-sub: clamp(17px, 1.5vw, 21px);
+  --text-section-title: clamp(2.5rem, 5vw, 5rem);
+  --text-subsection: clamp(1.5rem, 3vw, 2.5rem);
+  --text-large: clamp(1.25rem, 2vw, 1.75rem);
+  --text-body: clamp(1rem, 1.2vw, 1.125rem);
+  --text-small: clamp(0.875rem, 1vw, 1rem);
+
+  /* Letter Spacing */
+  --tracking-tight: -0.03em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.15em;
+  --tracking-wider: 0.2em;
+
+  /* Spacing */
+  --section-padding-y: clamp(80px, 12vh, 160px);
+  --section-padding-x: clamp(20px, 5vw, 80px);
+  --container-max: 1200px;
+
+  /* Easings */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Borders & Radius */
+  --border-subtle: 1px solid rgba(46, 154, 196, 0.08);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+
+  /* Z-Index */
+  --z-base: 0;
+  --z-above: 10;
+  --z-nav: 100;
+  --z-overlay: 200;
+  --z-intro: 9999;
+  --z-cursor: 99998;
+}
+
+/* === GLOBAL RESETS === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--white);
+  color: var(--text-dark);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* === SELECTION COLOR === */
+::selection {
+  background: rgba(46, 154, 196, 0.2);
+  color: var(--text-dark);
+}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--light-gray);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--medium-gray);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ocean-blue);
+}
+
+/* === UTILITY CLASSES === */
+.text-blue-gradient {
+  background: linear-gradient(135deg, #56B8DE 0%, #2E9AC4 50%, #1B7EA6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-shimmer {
+  background: linear-gradient(
+    105deg,
+    #2E9AC4 0%,
+    #1B7EA6 30%,
+    #56B8DE 50%,
+    #2E9AC4 70%,
+    #1B7EA6 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textShimmer 4s ease-in-out infinite;
+}
+
+@keyframes textShimmer {
+  0% { background-position: 200% center; }
+  50% { background-position: -50% center; }
+  100% { background-position: 200% center; }
+}
+
+.bg-gradient-radial-blue {
+  background: radial-gradient(ellipse at center, rgba(46, 154, 196, 0.06) 0%, transparent 70%);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(46, 154, 196, 0.07);
+  border-radius: 16px;
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(46, 154, 196, 0.18);
+  box-shadow: 0 15px 45px rgba(27, 126, 166, 0.10), 0 5px 15px rgba(27, 126, 166, 0.06);
+}
+
+/* Section Divider */
+.section-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(46, 154, 196, 0.15) 30%, rgba(46, 154, 196, 0.25) 50%, rgba(46, 154, 196, 0.15) 70%, transparent 100%);
+}
+
+/* Glow Dot */
+.glow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ocean-blue);
+  box-shadow: 0 0 10px rgba(46, 154, 196, 0.5), 0 0 20px rgba(46, 154, 196, 0.2);
+}
+
+/* === REDUCED MOTION === */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+section[id] {
+  scroll-margin-top: 80px;
+}

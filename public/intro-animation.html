@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRON Media</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --blue-dark: #1B2D5B;
+      --blue-medium: #2E7DC0;
+      --blue-light: #4BA8E8;
+      --blue-flood: #1B2D5B;
+      --text-dark: #111827;
+      --text-gray: #9CA3AF;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: var(--bg);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* === INTRO OVERLAY === */
+    #intro-overlay {
+      position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 9999;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    /* === AMBIENT GLOW === */
+    .ambient-glow {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(37, 99, 235, 0.025) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* === BARS === */
+    .bar {
+      position: absolute; top: 0; left: 0;
+      border-radius: 999px;
+      z-index: 10;
+      will-change: transform, opacity;
+      transform-origin: center bottom;
+    }
+    .bar-center {
+      width: clamp(18px, 2.5vw, 28px);
+      height: clamp(75px, 10vw, 120px);
+      background: var(--blue-medium);
+    }
+    .bar-left {
+      width: clamp(18px, 2.5vw, 28px);
+      height: clamp(50px, 7vw, 80px);
+      background: var(--blue-dark);
+    }
+    .bar-right {
+      width: clamp(18px, 2.5vw, 28px);
+      height: clamp(60px, 8.5vw, 96px);
+      background: var(--blue-light);
+    }
+
+    /* === LOGO TEXT === */
+    .logo-text {
+      position: absolute; top: 0; left: 0;
+      display: flex; flex-direction: column;
+      z-index: 10; line-height: 1;
+      will-change: transform, opacity;
+    }
+    .logo-iron {
+      font-size: clamp(48px, 7vw, 80px);
+      font-weight: 800;
+      color: var(--text-dark);
+      letter-spacing: 0.03em;
+      opacity: 0;
+    }
+    .logo-media {
+      font-size: clamp(14px, 2vw, 22px);
+      font-weight: 500;
+      color: var(--text-gray);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-top: 2px;
+      opacity: 0;
+    }
+
+    /* === BLUE SCREEN === */
+    .blue-screen {
+      position: fixed; bottom: 0; left: 0;
+      width: 100%; height: 0;
+      background: var(--blue-flood);
+      z-index: 50;
+      will-change: transform, height;
+    }
+    .blue-screen::before {
+      content: '';
+      position: absolute; top: -25px; left: -5%;
+      width: 110%; height: 50px;
+      background: var(--blue-flood);
+      border-radius: 50% 50% 0 0;
+      opacity: 0; transition: opacity 0.05s;
+    }
+    .blue-screen.rising::before { opacity: 1; }
+
+    /* === PARTICLE === */
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 12;
+      will-change: transform, opacity;
+    }
+
+    /* === SKIP BUTTON === */
+    .skip-button {
+      position: fixed;
+      bottom: clamp(20px, 4vh, 40px);
+      right: clamp(20px, 4vw, 40px);
+      z-index: 10001;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(209, 213, 219, 0.5);
+      border-radius: 999px;
+      padding: 8px 20px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px; font-weight: 500;
+      color: var(--text-gray);
+      cursor: pointer;
+      opacity: 0; transform: translateY(8px);
+      transition: all 0.3s ease;
+      min-height: 44px; min-width: 44px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      overflow: hidden;
+    }
+    .skip-button:hover {
+      border-color: rgba(37, 99, 235, 0.3);
+      color: var(--text-dark);
+      background: rgba(239, 246, 255, 0.6);
+    }
+    .skip-button.on-blue {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .skip-button:focus-visible { outline: 2px solid #2563EB; outline-offset: 2px; }
+    .skip-progress {
+      position: absolute; bottom: 0; left: 0;
+      height: 2px; width: 0%;
+      background: linear-gradient(90deg, var(--blue-medium), var(--blue-light));
+      border-radius: 0 0 999px 999px;
+    }
+
+    /* === WEBSITE === */
+    #website-content {
+      opacity: 0; transform: scale(0.98);
+      will-change: transform, opacity;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="intro-overlay" role="presentation">
+    <div class="ambient-glow" id="ambient-glow"></div>
+
+    <div class="bar bar-left" id="bar-left"></div>
+    <div class="bar bar-center" id="bar-center"></div>
+    <div class="bar bar-right" id="bar-right"></div>
+
+    <div class="logo-text" id="logo-text">
+      <span class="logo-iron" id="logo-iron">IRON</span>
+      <span class="logo-media" id="logo-media">MEDIA</span>
+    </div>
+
+    <div class="blue-screen" id="blue-screen"></div>
+
+    <button id="skip-btn" class="skip-button" aria-label="Animation überspringen">
+      Überspringen
+      <span class="skip-progress" id="skip-progress"></span>
+    </button>
+  </div>
+
+  <main id="website-content">
+    <!-- Website content will be loaded here -->
+  </main>
+
+  <script>
+  (function() {
+    'use strict';
+
+    /* ============================================================
+       IRON MEDIA — INTRO ANIMATION V3
+       4 Phases: PLOP (0-1.8s), TEXT (1.8-2.8s), HOLD (2.8-3.4s), PUSH (3.4-5.4s)
+       Clean · Bouncy · Big · Playful · Premium
+       ============================================================ */
+
+    // === REDUCED MOTION ===
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const ov = document.getElementById('intro-overlay');
+      const ct = document.getElementById('website-content');
+      setTimeout(() => {
+        ov.style.transition = 'opacity 0.4s';
+        ov.style.opacity = '0';
+        ct.style.transition = 'opacity 0.4s, transform 0.4s';
+        ct.style.opacity = '1'; ct.style.transform = 'scale(1)';
+        setTimeout(() => { ov.remove(); document.body.style.overflow = ''; }, 500);
+      }, 800);
+      return;
+    }
+
+    // === REFS ===
+    const overlay = document.getElementById('intro-overlay');
+    const content = document.getElementById('website-content');
+    const skipBtn = document.getElementById('skip-btn');
+    const skipProg = document.getElementById('skip-progress');
+    const barC = document.getElementById('bar-center');
+    const barL = document.getElementById('bar-left');
+    const barR = document.getElementById('bar-right');
+    const logoText = document.getElementById('logo-text');
+    const logoIron = document.getElementById('logo-iron');
+    const logoMedia = document.getElementById('logo-media');
+    const blueScreen = document.getElementById('blue-screen');
+    const ambientGlow = document.getElementById('ambient-glow');
+
+    const W = window.innerWidth, H = window.innerHeight;
+    const cx = W / 2, cy = H / 2;
+    let isSkipped = false;
+    const isMobile = W < 480;
+
+    // Hide ambient glow on mobile
+    if (isMobile) ambientGlow.style.display = 'none';
+
+    // Ambient glow breathing
+    if (!isMobile) {
+      gsap.to(ambientGlow, {
+        opacity: 0.6, duration: 1.5, yoyo: true, repeat: -1, ease: 'sine.inOut'
+      });
+    }
+
+    // === POSITION CALCULATIONS ===
+    const barW = Math.max(18, Math.min(W * 0.025, 28));
+    const barHC = Math.max(75, Math.min(W * 0.1, 120));
+    const barHL = Math.max(50, Math.min(W * 0.07, 80));
+    const barHR = Math.max(60, Math.min(W * 0.085, 96));
+    const gap = Math.max(8, Math.min(W * 0.012, 14));
+    const totalBarW = barW * 3 + gap * 2;
+
+    // Measure IRON text
+    const ironFS = Math.max(48, Math.min(W * 0.07, 80));
+    const tempSpan = document.createElement('span');
+    tempSpan.style.cssText = `font-family:Inter,sans-serif;font-size:${ironFS}px;font-weight:800;letter-spacing:0.03em;visibility:hidden;position:absolute;`;
+    tempSpan.textContent = 'IRON';
+    document.body.appendChild(tempSpan);
+    const ironW = tempSpan.offsetWidth;
+    const ironH = tempSpan.offsetHeight;
+    document.body.removeChild(tempSpan);
+
+    const textGap = Math.max(12, Math.min(W * 0.025, 24));
+    const totalLogoW = totalBarW + textGap + ironW;
+    const logoStartX = cx - totalLogoW / 2;
+
+    // Final positions (top-left anchor, bars bottom-aligned to cy + barHC/2)
+    const baseY = cy + barHC / 2; // bottom line of bars
+    const finalLX = logoStartX;
+    const finalCX = logoStartX + barW + gap;
+    const finalRX = logoStartX + barW * 2 + gap * 2;
+    const finalLY = baseY - barHL;
+    const finalCY = baseY - barHC;
+    const finalRY = baseY - barHR;
+    const finalTextX = logoStartX + totalBarW + textGap;
+    const finalTextY = baseY - barHC; // Align IRON top with tallest bar top
+
+    // === PARTICLES (DOM-based, simple) ===
+    function spawnParticles(x, y, color, count) {
+      const cnt = isMobile ? Math.max(2, count - 1) : count;
+      for (let i = 0; i < cnt; i++) {
+        const el = document.createElement('div');
+        el.className = 'particle';
+        const size = 2 + Math.random() * 2;
+        el.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;background:${color};opacity:0.4;`;
+        overlay.appendChild(el);
+        const angle = (Math.PI * 2 / cnt) * i + (Math.random() - 0.5) * 0.8;
+        const speed = 2 + Math.random() * 3;
+        gsap.to(el, {
+          x: Math.cos(angle) * speed * 20,
+          y: Math.sin(angle) * speed * 15 + 30,
+          opacity: 0,
+          duration: 0.35,
+          ease: 'power2.out',
+          onComplete: () => el.remove()
+        });
+      }
+    }
+
+    // === SCREEN SHAKE ===
+    function screenShake(intensity, duration) {
+      const str = isMobile ? intensity * 0.5 : intensity;
+      const steps = Math.ceil(duration / 16);
+      let step = 0;
+      function shake() {
+        if (step >= steps) { overlay.style.transform = 'translate(0,0)'; return; }
+        const decay = 1 - step / steps;
+        const sx = (Math.random() - 0.5) * str * 2 * decay;
+        const sy = (Math.random() - 0.5) * str * 2 * decay;
+        overlay.style.transform = `translate(${sx}px,${sy}px)`;
+        step++;
+        requestAnimationFrame(shake);
+      }
+      shake();
+    }
+
+    // === INITIAL STATES ===
+    gsap.set(barC, { x: finalCX, y: -H, scale: 2.5, opacity: 1 });
+    gsap.set(barL, { x: finalLX, y: -H, scale: 2.8, opacity: 1, rotation: 8 });
+    gsap.set(barR, { x: finalRX, y: -H, scale: 2.2, opacity: 1, rotation: -5 });
+    gsap.set(logoText, { x: finalTextX, y: finalTextY });
+
+    // === MASTER TIMELINE ===
+    const tl = gsap.timeline({
+      onUpdate: () => { if (!isSkipped) skipProg.style.width = (tl.progress() * 100) + '%'; },
+      onComplete: cleanup
+    });
+
+    // ╔══════════════════════════════════════════════════╗
+    // ║ PHASE 1: PLOP (0ms – 1800ms)                   ║
+    // ╚══════════════════════════════════════════════════╝
+
+    // --- BAR CENTER (the Leader) — 200ms ---
+    tl.to(barC, { y: finalCY, scale: 1.8, duration: 0.35, ease: 'power3.in' }, 0.2);
+    // Squash
+    tl.to(barC, { scaleX: 1.5, scaleY: 0.65, duration: 0.08, ease: 'power2.out',
+      onStart: () => { screenShake(2, 40); spawnParticles(finalCX + barW/2, baseY, '#2E7DC0', 4); }
+    }, 0.55);
+    // Bounce 1 up
+    tl.to(barC, { scaleX: 0.85, scaleY: 1.15, y: finalCY - 60, duration: 0.2, ease: 'power2.out' }, 0.63);
+    // Bounce 1 down + squash 2
+    tl.to(barC, { y: finalCY, scaleX: 1.25, scaleY: 0.8, duration: 0.14, ease: 'power2.in' }, 0.83);
+    // Bounce 2 up
+    tl.to(barC, { scaleX: 0.9, scaleY: 1.1, y: finalCY - 20, duration: 0.1, ease: 'power2.out' }, 0.97);
+    // Settle
+    tl.to(barC, { y: finalCY, scaleX: 1, scaleY: 1, duration: 0.13, ease: 'elastic.out(1, 0.5)' }, 1.07);
+    // Shrink throughout
+    tl.to(barC, { scale: 1, duration: 0.7, ease: 'power2.inOut' }, 0.55);
+
+    // --- BAR LEFT (the Heavy) — 550ms ---
+    tl.to(barL, { y: finalLY, scale: 1.6, rotation: 0, duration: 0.35, ease: 'power3.in' }, 0.55);
+    // Squash — heavier
+    tl.to(barL, { scaleX: 1.6, scaleY: 0.55, duration: 0.1, ease: 'power2.out',
+      onStart: () => { screenShake(3, 50); spawnParticles(finalLX + barW/2, baseY, '#1B2D5B', 4); }
+    }, 0.9);
+    // Bar Center reacts
+    tl.to(barC, { rotation: 2, duration: 0.08, ease: 'power2.out' }, 0.9);
+    tl.to(barC, { rotation: 0, duration: 0.15, ease: 'elastic.out(1, 0.4)' }, 0.98);
+    // Bounce up — low (heavy)
+    tl.to(barL, { scaleX: 0.85, scaleY: 1.15, y: finalLY - 40, duration: 0.18, ease: 'power2.out' }, 1.0);
+    // Settle
+    tl.to(barL, { y: finalLY, scaleX: 1, scaleY: 1, rotation: 0, duration: 0.2, ease: 'elastic.out(1, 0.5)' }, 1.18);
+    // Shrink
+    tl.to(barL, { scale: 1, duration: 0.6, ease: 'power2.inOut' }, 0.9);
+
+    // --- BAR RIGHT (the Light) — 950ms ---
+    tl.to(barR, { y: finalRY, scale: 1.3, rotation: 0, duration: 0.3, ease: 'power3.in' }, 0.95);
+    // Squash — lightest
+    tl.to(barR, { scaleX: 1.3, scaleY: 0.75, duration: 0.06, ease: 'power2.out',
+      onStart: () => { screenShake(1.5, 30); spawnParticles(finalRX + barW/2, baseY, '#4BA8E8', 3); }
+    }, 1.25);
+    // Bars react
+    tl.to(barC, { rotation: -1.5, duration: 0.06, ease: 'power2.out' }, 1.25);
+    tl.to(barC, { rotation: 0, duration: 0.12, ease: 'elastic.out(1, 0.4)' }, 1.31);
+    tl.to(barL, { rotation: 1, duration: 0.06, ease: 'power2.out' }, 1.25);
+    tl.to(barL, { rotation: 0, duration: 0.1, ease: 'elastic.out(1, 0.4)' }, 1.31);
+    // Bounce 1 — high (light)
+    tl.to(barR, { scaleX: 0.8, scaleY: 1.2, y: finalRY - 70, duration: 0.15, ease: 'power2.out' }, 1.31);
+    // Bounce 1 down
+    tl.to(barR, { y: finalRY, scaleX: 1.15, scaleY: 0.88, duration: 0.12, ease: 'power2.in' }, 1.46);
+    // Bounce 2
+    tl.to(barR, { scaleX: 0.9, scaleY: 1.1, y: finalRY - 25, duration: 0.08, ease: 'power2.out' }, 1.58);
+    // Bounce 3 + settle
+    tl.to(barR, { y: finalRY, scaleX: 1, scaleY: 1, rotation: 0, duration: 0.12, ease: 'elastic.out(1, 0.5)' }, 1.66);
+    // Shrink
+    tl.to(barR, { scale: 1, duration: 0.5, ease: 'power2.inOut' }, 1.25);
+
+    // --- FORMATION SETTLE (1500ms – 1800ms) ---
+    tl.to(barC, { x: finalCX, y: finalCY, duration: 0.15, ease: 'power2.inOut' }, 1.5);
+    tl.to(barL, { x: finalLX, y: finalLY, duration: 0.15, ease: 'power2.inOut' }, 1.5);
+    tl.to(barR, { x: finalRX, y: finalRY, duration: 0.15, ease: 'power2.inOut' }, 1.5);
+    // Micro-vibrate snap
+    [barC, barL, barR].forEach((bar, i) => {
+      tl.to(bar, { x: '+=0.5', duration: 0.04, yoyo: true, repeat: 1, ease: 'none' }, 1.7 + i * 0.02);
+    });
+
+    // ╔══════════════════════════════════════════════════╗
+    // ║ PHASE 2: TEXT (1800ms – 2800ms)                 ║
+    // ╚══════════════════════════════════════════════════╝
+
+    // --- "IRON" plops from above at 1900ms ---
+    tl.fromTo(logoIron, {
+      y: -H * 0.8, scale: 1.6, opacity: 1
+    }, {
+      y: 0, scale: 1.1, opacity: 1,
+      duration: 0.25, ease: 'power3.in'
+    }, 1.9);
+    // Squash
+    tl.to(logoIron, { scaleX: 1.2, scaleY: 0.9, duration: 0.06, ease: 'power2.out',
+      onComplete: () => {
+        screenShake(1.5, 30);
+        spawnParticles(finalTextX + ironW / 2, finalTextY + ironH / 2, '#111827', 3);
+        // Bars micro-jump
+        [barC, barL, barR].forEach(b => {
+          gsap.to(b, { y: '-=6', duration: 0.06, ease: 'power2.out' });
+          gsap.to(b, { y: '+=6', duration: 0.1, ease: 'power2.in', delay: 0.06 });
+        });
+      }
+    }, 2.15);
+    // Bounce + settle
+    tl.to(logoIron, { scaleX: 0.95, scaleY: 1.05, y: -15, duration: 0.12, ease: 'power2.out' }, 2.21);
+    tl.to(logoIron, { scaleX: 1, scaleY: 1, scale: 1, y: 0, duration: 0.2, ease: 'elastic.out(1, 0.5)' }, 2.33);
+
+    // --- "MEDIA" plops from above at 2350ms ---
+    tl.fromTo(logoMedia, {
+      y: -H * 0.5, scale: 1.3, opacity: 1
+    }, {
+      y: 0, scale: 1, opacity: 1,
+      duration: 0.2, ease: 'power3.in'
+    }, 2.35);
+    // Light squash
+    tl.to(logoMedia, { scaleX: 1.1, scaleY: 0.92, duration: 0.05, ease: 'power2.out',
+      onComplete: () => {
+        // Subtle micro-wobble on whole logo
+        gsap.to([barC, barL, barR, logoIron], { y: '-=1', duration: 0.04, ease: 'power2.out' });
+        gsap.to([barC, barL, barR, logoIron], { y: '+=1', duration: 0.06, ease: 'elastic.out(1, 0.4)', delay: 0.04 });
+      }
+    }, 2.55);
+    // Bounce + settle
+    tl.to(logoMedia, { scaleX: 1, scaleY: 1, y: -8, duration: 0.08, ease: 'power2.out' }, 2.6);
+    tl.to(logoMedia, { y: 0, duration: 0.12, ease: 'elastic.out(1, 0.5)' }, 2.68);
+
+    // ╔══════════════════════════════════════════════════╗
+    // ║ PHASE 3: HOLD (2800ms – 3400ms)                 ║
+    // ╚══════════════════════════════════════════════════╝
+
+    // 300ms stillness, then grow to 1.06
+    const allLogo = [barC, barL, barR, logoText];
+    tl.to(allLogo, { scale: 1.06, duration: 0.3, ease: 'power2.inOut' }, 3.1);
+
+    // ╔══════════════════════════════════════════════════╗
+    // ║ PHASE 4: PUSH (3400ms – 5400ms)                 ║
+    // ║ Domino push — bars fall DOWN one by one          ║
+    // ╚══════════════════════════════════════════════════╝
+
+    // STEP 1: Right bar leans left, pushes Middle (3400ms)
+    tl.to(barR, { rotation: 12, x: finalRX - 8, duration: 0.12, ease: 'power2.in' }, 3.4);
+
+    // STEP 1b: Contact — Middle gets nudged (3520ms)
+    tl.to(barC, { rotation: -8, x: finalCX - 5, duration: 0.1, ease: 'power2.out',
+      onStart: () => spawnParticles(finalCX + barW, baseY - barHC/2, '#2E7DC0', 3)
+    }, 3.52);
+    tl.to(barR, { rotation: 3, duration: 0.08, ease: 'power2.out' }, 3.52); // Right bounces back slightly
+
+    // STEP 2: Middle swings back HARD, pushes Right (3620ms)
+    tl.to(barC, { rotation: 15, x: finalCX + 10, duration: 0.15, ease: 'power3.in' }, 3.62);
+
+    // STEP 3: Contact! Right gets hit HARD and FALLS DOWN (3770ms)
+    tl.to(barR, {
+      y: H * 1.2, x: finalRX + 30, rotation: 90, scale: 0.8, opacity: 0,
+      duration: 0.33, ease: 'power2.in',
+      onStart: () => { screenShake(2, 40); spawnParticles(finalRX + barW/2, baseY - barHR/2, '#4BA8E8', 4); }
+    }, 3.77);
+
+    // Middle settles after right falls
+    tl.to(barC, { rotation: 0, x: finalCX, duration: 0.12, ease: 'power2.out' }, 3.85);
+
+    // STEP 4: Left bar pushes Middle (3950ms)
+    tl.to(barL, { rotation: -15, x: finalLX + 10, duration: 0.13, ease: 'power3.in' }, 3.95);
+
+    // STEP 5: Contact! Middle FALLS DOWN (4080ms)
+    tl.to(barC, {
+      y: H * 1.2, x: finalCX + 20, rotation: 110, scale: 0.8, opacity: 0,
+      duration: 0.3, ease: 'power2.in',
+      onStart: () => { screenShake(2, 40); spawnParticles(finalCX + barW/2, baseY - barHC/2, '#2E7DC0', 4); }
+    }, 4.08);
+
+    // Left settles, "looks around"
+    tl.to(barL, { rotation: 0, x: finalLX, duration: 0.1, ease: 'power2.out' }, 4.15);
+    // Optional wackler
+    tl.to(barL, { rotation: 1, duration: 0.06, yoyo: true, repeat: 1, ease: 'power2.inOut' }, 4.25);
+
+    // STEP 6: Left JUMPS voluntarily (4420ms)
+    // Small hop up first
+    tl.to(barL, { y: finalLY - 20, duration: 0.1, ease: 'power2.out' }, 4.42);
+    // Then falls
+    tl.to(barL, {
+      y: H * 1.2, rotation: -60, scale: 0.8, opacity: 0,
+      duration: 0.3, ease: 'power2.in'
+    }, 4.52);
+
+    // STEP 7: Text fades out (4300ms, parallel)
+    tl.to(logoIron, { opacity: 0, y: '+=10', duration: 0.2, ease: 'power2.in' }, 4.3);
+    tl.to(logoMedia, { opacity: 0, y: '+=8', duration: 0.15, ease: 'power2.in' }, 4.35);
+
+    // STEP 8: Screen goes BLUE — wipe from bottom (4700ms)
+    tl.to(blueScreen, {
+      height: '120vh', duration: 0.3, ease: 'power3.in',
+      onStart: () => { blueScreen.classList.add('rising'); skipBtn.classList.add('on-blue'); }
+    }, 4.7);
+
+    // Hold blue (5000ms – 5100ms)
+    // Wipe away + website reveal (5100ms)
+    tl.to(blueScreen, { y: H * 1.2, duration: 0.3, ease: 'expo.inOut' }, 5.1);
+    tl.to(content, { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' }, 5.1);
+
+    // ╔══════════════════════════════════════════════════╗
+    // ║ DONE — ~5400ms                                  ║
+    // ╚══════════════════════════════════════════════════╝
+
+    // === SKIP BUTTON ===
+    gsap.to(skipBtn, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out', delay: 0.6 });
+
+    function skipAnimation() {
+      if (isSkipped) return;
+      isSkipped = true;
+      tl.progress(1);
+      gsap.to(overlay, { opacity: 0, duration: 0.2, ease: 'power2.out', onComplete: () => overlay.remove() });
+      content.style.opacity = '1'; content.style.transform = 'scale(1)';
+      gsap.to(skipBtn, { opacity: 0, duration: 0.1 });
+      document.body.style.overflow = '';
+    }
+
+    skipBtn.addEventListener('click', skipAnimation);
+    document.addEventListener('keydown', keyHandler);
+
+    function keyHandler(e) {
+      if (e.key === 'Escape' || e.key === ' ') { e.preventDefault(); skipAnimation(); }
+    }
+
+    // === CLEANUP ===
+    function cleanup() {
+      document.body.style.overflow = '';
+      gsap.to(skipBtn, { opacity: 0, duration: 0.2 });
+      setTimeout(() => {
+        if (overlay && overlay.parentNode) overlay.remove();
+        tl.kill();
+        document.removeEventListener('keydown', keyHandler);
+      }, 500);
+    }
+
+  })();
+  </script>
+</body>
+</html>

@@ -38,6 +38,7 @@ export const PARTNERS = [
 ]
 
 export const NAV_ITEMS = [
-  { label: 'Home', href: '#' },
+  { label: 'Leistungen', href: '#leistungen' },
+  { label: 'Über uns', href: '#about' },
   { label: 'Kontakt', href: '#contact' },
 ]

@@ -2,46 +2,11 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { PARTNERS } from '@/lib/constants'
+import { NAV_ITEMS } from '@/lib/constants'
 
 // ── Spring transition presets ──────────────────────────────────
 const springSnappy = { type: 'spring' as const, stiffness: 400, damping: 30 }
 const springGentle = { type: 'spring' as const, stiffness: 300, damping: 25 }
-
-// ── Keyframe styles injected once ──────────────────────────────
-const KEYFRAMES_ID = 'nav-keyframes'
-
-function useInjectKeyframes() {
-  useEffect(() => {
-    if (document.getElementById(KEYFRAMES_ID)) return
-    const style = document.createElement('style')
-    style.id = KEYFRAMES_ID
-    style.textContent = `
-      @keyframes glowPulse {
-        0%, 100% {
-          box-shadow:
-            0 0 20px rgba(46,154,196,0.12),
-            0 0 40px rgba(46,154,196,0.06),
-            inset 0 0 20px rgba(46,154,196,0.04);
-        }
-        50% {
-          box-shadow:
-            0 0 25px rgba(46,154,196,0.18),
-            0 0 50px rgba(46,154,196,0.10),
-            inset 0 0 25px rgba(46,154,196,0.06);
-        }
-      }
-      @keyframes marquee {
-        0%   { transform: translateX(0); }
-        100% { transform: translateX(-50%); }
-      }
-    `
-    document.head.appendChild(style)
-    return () => {
-      style.remove()
-    }
-  }, [])
-}
 
 // ── Logo Bar Component ─────────────────────────────────────────
 function LogoBars({ hovered }: { hovered: boolean }) {
@@ -70,26 +35,92 @@ function LogoBars({ hovered }: { hovered: boolean }) {
   )
 }
 
-// ── CTA Button with cursor-tracking spotlight ─────────────────
+// ── Nav Link with hover underline ──────────────────────────────
+function NavLink({
+  label,
+  href,
+  index,
+  onClick,
+}: {
+  label: string
+  href: string
+  index: number
+  onClick?: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <motion.a
+      href={href}
+      onClick={onClick}
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.15 + index * 0.05, ease: [0.16, 1, 0.3, 1] }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative',
+        fontFamily: 'var(--font-body)',
+        fontSize: 14,
+        fontWeight: 500,
+        color: hovered ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
+        textDecoration: 'none',
+        transition: 'color 0.25s ease',
+        paddingBottom: 4,
+      }}
+    >
+      {label}
+      <motion.span
+        animate={{ width: hovered ? '100%' : '0%' }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        style={{
+          position: 'absolute',
+          bottom: -4,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          height: 2,
+          background: '#56B8DE',
+          borderRadius: 1,
+        }}
+      />
+    </motion.a>
+  )
+}
+
+// ── CTA Button with cursor-tracking spotlight + magnetic effect ─
 function CTAButton({
   onClick,
-  className,
+  style: styleProp,
 }: {
   onClick?: () => void
-  className?: string
+  style?: React.CSSProperties
 }) {
   const buttonRef = useRef<HTMLAnchorElement>(null)
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
   const [isHovered, setIsHovered] = useState(false)
   const [isPressed, setIsPressed] = useState(false)
+  const [magnetOffset, setMagnetOffset] = useState({ x: 0, y: 0 })
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>) => {
       const rect = e.currentTarget.getBoundingClientRect()
+      // Spotlight position
       setMousePos({
         x: ((e.clientX - rect.left) / rect.width) * 100,
         y: ((e.clientY - rect.top) / rect.height) * 100,
       })
+      // Magnetic offset (±4px within element bounds)
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+      const distX = e.clientX - centerX
+      const distY = e.clientY - centerY
+      const dist = Math.sqrt(distX * distX + distY * distY)
+      if (dist < 80) {
+        setMagnetOffset({
+          x: (distX / 80) * 4,
+          y: (distY / 80) * 4,
+        })
+      }
     },
     []
   )
@@ -104,35 +135,35 @@ function CTAButton({
       onMouseLeave={() => {
         setIsHovered(false)
         setIsPressed(false)
+        setMagnetOffset({ x: 0, y: 0 })
       }}
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
-      whileHover={{ scale: 1.03 }}
-      animate={isPressed ? { scale: 0.97 } : {}}
+      animate={{
+        scale: isPressed ? 0.97 : isHovered ? 1.03 : 1,
+        x: magnetOffset.x,
+        y: magnetOffset.y,
+      }}
       transition={{ ...springSnappy, duration: isPressed ? 0.1 : undefined }}
-      className={className}
       style={{
         position: 'relative',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '12px 28px',
-        background: 'linear-gradient(135deg, #2E9AC4, #1B7EA6)',
+        padding: '10px 24px',
+        background: isHovered ? '#56B8DE' : '#2E9AC4',
         color: '#FFFFFF',
         borderRadius: 8,
         fontFamily: 'var(--font-body)',
         fontWeight: 500,
         fontSize: 13,
-        letterSpacing: '0.02em',
         textDecoration: 'none',
         border: 'none',
         cursor: 'pointer',
         overflow: 'hidden',
         whiteSpace: 'nowrap',
-        boxShadow: isHovered
-          ? '0 8px 32px rgba(27,126,166,0.25), 0 2px 8px rgba(46,154,196,0.15)'
-          : '0 4px 16px rgba(27,126,166,0.12)',
-        transition: 'box-shadow 0.3s ease',
+        transition: 'background 0.3s ease',
+        ...styleProp,
       }}
     >
       {/* Cursor-tracking spotlight */}
@@ -146,9 +177,7 @@ function CTAButton({
           transition: 'opacity 0.2s ease',
         }}
       />
-      <span style={{ position: 'relative', zIndex: 1 }}>
-        Erstgespr&auml;ch vereinbaren
-      </span>
+      <span style={{ position: 'relative', zIndex: 1 }}>Projekt starten</span>
     </motion.a>
   )
 }
@@ -214,59 +243,22 @@ function HamburgerButton({
   )
 }
 
-// ── Partner Marquee Slider ─────────────────────────────────────
-function PartnerSlider() {
-  const doubled = [...PARTNERS, ...PARTNERS]
-
-  return (
-    <div
-      style={{
-        background: 'rgba(255, 255, 255, 0.04)',
-        borderTop: '1px solid rgba(46, 154, 196, 0.1)',
-        borderRadius: '0 0 16px 16px',
-        padding: '8px 0',
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          gap: 24,
-          whiteSpace: 'nowrap',
-          animation: 'marquee 20s linear infinite',
-          width: 'max-content',
-        }}
-      >
-        {doubled.map((partner, i) => (
-          <span
-            key={i}
-            style={{
-              fontFamily: 'var(--font-body)',
-              fontSize: 11,
-              fontWeight: 400,
-              color: 'rgba(255, 255, 255, 0.5)',
-              letterSpacing: '0.04em',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            {partner.name}
-            <span style={{ opacity: 0.6 }}>{partner.subtitle}</span>
-            <span style={{ opacity: 0.3 }}>·</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ── Main Navigation ────────────────────────────────────────────
 export default function Navigation() {
+  const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [logoHovered, setLogoHovered] = useState(false)
 
-  useInjectKeyframes()
+  // Glassmorphism on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50)
+    }
+    // Check initial state
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -284,37 +276,36 @@ export default function Navigation() {
 
   return (
     <>
-      {/* ── Floating Pill Navigation ──────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      {/* ── Full-Width Navigation Bar ──────────────────── */}
+      <nav
         style={{
           position: 'fixed',
-          top: 16,
-          left: 24,
-          right: 24,
+          top: 0,
+          left: 0,
+          right: 0,
           zIndex: 100,
-          maxWidth: 1200,
-          margin: '0 auto',
+          height: 72,
+          background: scrolled ? 'rgba(10, 15, 30, 0.8)' : 'transparent',
+          backdropFilter: scrolled ? 'blur(20px) saturate(1.2)' : 'none',
+          WebkitBackdropFilter: scrolled ? 'blur(20px) saturate(1.2)' : 'none',
+          borderBottom: scrolled
+            ? '1px solid rgba(255, 255, 255, 0.08)'
+            : '1px solid transparent',
+          transition: 'all 0.4s ease',
         }}
       >
-        {/* Main nav bar */}
-        <nav
+        <div
           style={{
+            maxWidth: 1200,
+            margin: '0 auto',
+            padding: '0 48px',
+            height: '100%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '16px 32px',
-            background: 'rgba(255, 255, 255, 0.08)',
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            border: '1px solid rgba(46, 154, 196, 0.25)',
-            borderBottom: 'none',
-            borderRadius: '16px 16px 0 0',
-            animation: 'glowPulse 4s ease-in-out infinite',
+            position: 'relative',
           }}
-          className="max-md:!px-5"
+          className="max-md:!px-6"
         >
           {/* ── Left: Logo ──────────────────────────────── */}
           <motion.a
@@ -324,12 +315,14 @@ export default function Navigation() {
             transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             onMouseEnter={() => setLogoHovered(true)}
             onMouseLeave={() => setLogoHovered(false)}
+            whileHover={{ scale: 1.04 }}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 10,
               textDecoration: 'none',
               cursor: 'pointer',
+              flexShrink: 0,
             }}
           >
             <LogoBars hovered={logoHovered} />
@@ -367,8 +360,25 @@ export default function Navigation() {
             </div>
           </motion.a>
 
+          {/* ── Center: Nav Links (desktop only) ────────── */}
+          <div
+            className="hidden md:flex"
+            style={{
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 32,
+            }}
+          >
+            {NAV_ITEMS.map((item, i) => (
+              <NavLink key={item.href} label={item.label} href={item.href} index={i} />
+            ))}
+          </div>
+
           {/* ── Right: CTA (desktop) + Hamburger (mobile) ── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
             <motion.div
               className="hidden md:block"
               initial={{ opacity: 0, x: 10 }}
@@ -389,11 +399,8 @@ export default function Navigation() {
               />
             </div>
           </div>
-        </nav>
-
-        {/* ── Partner Showcase Slider ─────────────────── */}
-        <PartnerSlider />
-      </motion.div>
+        </div>
+      </nav>
 
       {/* ── Mobile Menu Overlay ──────────────────────── */}
       <AnimatePresence>
@@ -411,21 +418,61 @@ export default function Navigation() {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
+              gap: 0,
               background: 'rgba(10, 10, 20, 0.95)',
               backdropFilter: 'blur(24px)',
               WebkitBackdropFilter: 'blur(24px)',
             }}
           >
-            {/* CTA centered */}
+            {/* Nav links */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 32,
+                marginBottom: 48,
+              }}
+            >
+              {NAV_ITEMS.map((item, i) => (
+                <motion.a
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeMobile}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ ...springGentle, delay: 0.05 + i * 0.07 }}
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 24,
+                    fontWeight: 500,
+                    color: 'rgba(255,255,255,0.85)',
+                    textDecoration: 'none',
+                    transition: 'color 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#FFFFFF'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'rgba(255,255,255,0.85)'
+                  }}
+                >
+                  {item.label}
+                </motion.a>
+              ))}
+            </div>
+
+            {/* CTA at bottom */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              transition={{ ...springGentle, delay: 0.05 }}
+              transition={{ ...springGentle, delay: 0.05 + NAV_ITEMS.length * 0.07 }}
             >
               <CTAButton
                 onClick={closeMobile}
-                className="!text-[15px] !px-8 !py-3.5"
+                style={{ fontSize: 15, padding: '14px 32px' }}
               />
             </motion.div>
           </motion.div>

@@ -101,16 +101,31 @@ export default function Hero({ introComplete }: HeroProps) {
         justifyContent: 'center',
       }}
     >
-      {/* ====== LAYER 0 — Spline 3D Background ====== */}
+      {/* ====== LAYER 0 — Spline 3D Background Grid ====== */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           zIndex: 0,
           pointerEvents: 'none',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateRows: 'repeat(2, 1fr)',
         }}
       >
-        <Spline scene={SPLINE_SCENE_URL} />
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              width: '100%',
+              height: '100%',
+            }}
+          >
+            <Spline scene={SPLINE_SCENE_URL} />
+          </div>
+        ))}
       </div>
 
       {/* ====== LAYER 1 — Content ====== */}

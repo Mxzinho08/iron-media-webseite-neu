@@ -1,13 +1,7 @@
 import type { Metadata } from 'next'
-import { Sora, JetBrains_Mono } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
+import { JetBrains_Mono } from 'next/font/google'
 import './globals.css'
-
-const sora = Sora({
-  subsets: ['latin'],
-  variable: '--font-display',
-  display: 'swap',
-  weight: ['200', '300', '400', '500', '600', '700', '800'],
-})
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
@@ -28,7 +22,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={`${sora.variable} ${jetbrainsMono.variable}`}>
+    <html lang="de" className={`${GeistSans.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-white text-text-dark antialiased overflow-x-hidden">
         {children}
       </body>

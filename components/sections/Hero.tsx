@@ -5,9 +5,8 @@ import { motion } from 'framer-motion'
 import { HERO_METRICS, TRUSTED_BRANDS } from '@/lib/constants'
 
 /* ============================================
-   IRON MEDIA — HERO v2
-   Left 42%: Text | Right 58%: GLSL 3 Pill Bars
-   Trusted By + Scroll Indicator at bottom
+   IRON MEDIA — HERO v3
+   Centered text + floating glassy bar bubbles
    ============================================ */
 
 interface HeroProps {
@@ -17,394 +16,155 @@ interface HeroProps {
 const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1]
 
 /* ============================================
-   GLSL SHADERS — 3 Vertical Pill-Shaped Bars
+   FLOATING GLASS BAR BUBBLES
+   Pill-shaped like the Iron Media logo bars,
+   with frosted glass appearance, autonomously
+   drifting around the hero section.
    ============================================ */
 
-const vertexShader = `
-varying vec2 vUv;
-void main() {
-  vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`
-
-const fragmentShader = `
-precision highp float;
-
-varying vec2 vUv;
-uniform float uTime;
-uniform vec2 uResolution;
-uniform vec2 uMouse;
-
-float hash(vec2 p) {
-  p = fract(p * vec2(123.34, 456.21));
-  p += dot(p, p + 45.32);
-  return fract(p.x * p.y);
+interface BubbleConfig {
+  id: number
+  x: number        // start % from left
+  y: number        // start % from top
+  width: number    // px
+  height: number   // px
+  color: string    // one of the 3 brand blues
+  opacity: number
+  rotation: number // initial deg
+  driftX: number   // px amplitude
+  driftY: number   // px amplitude
+  driftDuration: number // seconds
+  rotateDuration: number // seconds
+  delay: number    // animation delay seconds
+  blur: number     // backdrop blur px
+  scale: number
 }
 
-float noise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  f = f * f * (3.0 - 2.0 * f);
-  float a = hash(i);
-  float b = hash(i + vec2(1.0, 0.0));
-  float c = hash(i + vec2(0.0, 1.0));
-  float d = hash(i + vec2(1.0, 1.0));
-  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+const BRAND_COLORS = ['#56B8DE', '#2E9AC4', '#1B7EA6']
+
+function generateBubbles(): BubbleConfig[] {
+  // Create ~18 bubbles of varying sizes scattered across the hero
+  const configs: BubbleConfig[] = []
+
+  const presets: Array<{
+    x: number; y: number; w: number; h: number; colorIdx: number;
+    opacity: number; rot: number; driftX: number; driftY: number;
+    driftDur: number; rotDur: number; delay: number; blur: number; scale: number
+  }> = [
+    // Large accent bubbles
+    { x: 8, y: 15, w: 28, h: 120, colorIdx: 0, opacity: 0.12, rot: -15, driftX: 30, driftY: 25, driftDur: 18, rotDur: 25, delay: 0, blur: 12, scale: 1 },
+    { x: 85, y: 20, w: 24, h: 100, colorIdx: 1, opacity: 0.10, rot: 12, driftX: 25, driftY: 35, driftDur: 22, rotDur: 30, delay: 1, blur: 10, scale: 1 },
+    { x: 75, y: 70, w: 30, h: 130, colorIdx: 2, opacity: 0.09, rot: -20, driftX: 35, driftY: 20, driftDur: 20, rotDur: 28, delay: 0.5, blur: 14, scale: 1 },
+
+    // Medium bubbles
+    { x: 20, y: 65, w: 20, h: 85, colorIdx: 1, opacity: 0.11, rot: 25, driftX: 40, driftY: 30, driftDur: 16, rotDur: 22, delay: 2, blur: 8, scale: 1 },
+    { x: 55, y: 8, w: 18, h: 75, colorIdx: 0, opacity: 0.08, rot: -30, driftX: 25, driftY: 40, driftDur: 24, rotDur: 35, delay: 1.5, blur: 10, scale: 1 },
+    { x: 92, y: 50, w: 22, h: 90, colorIdx: 2, opacity: 0.10, rot: 18, driftX: 20, driftY: 25, driftDur: 19, rotDur: 26, delay: 0.8, blur: 12, scale: 1 },
+    { x: 35, y: 80, w: 16, h: 70, colorIdx: 0, opacity: 0.09, rot: -8, driftX: 30, driftY: 35, driftDur: 21, rotDur: 32, delay: 3, blur: 8, scale: 1 },
+    { x: 5, y: 45, w: 14, h: 60, colorIdx: 2, opacity: 0.07, rot: 35, driftX: 20, driftY: 30, driftDur: 17, rotDur: 24, delay: 2.5, blur: 6, scale: 1 },
+
+    // Small accent bubbles
+    { x: 45, y: 25, w: 12, h: 50, colorIdx: 1, opacity: 0.06, rot: -22, driftX: 35, driftY: 45, driftDur: 15, rotDur: 20, delay: 1.2, blur: 6, scale: 1 },
+    { x: 68, y: 40, w: 10, h: 45, colorIdx: 0, opacity: 0.07, rot: 14, driftX: 30, driftY: 25, driftDur: 23, rotDur: 28, delay: 4, blur: 4, scale: 1 },
+    { x: 15, y: 85, w: 14, h: 55, colorIdx: 2, opacity: 0.08, rot: -35, driftX: 25, driftY: 30, driftDur: 18, rotDur: 30, delay: 1.8, blur: 8, scale: 1 },
+    { x: 80, y: 5, w: 12, h: 48, colorIdx: 1, opacity: 0.06, rot: 28, driftX: 20, driftY: 35, driftDur: 26, rotDur: 34, delay: 3.5, blur: 6, scale: 1 },
+    { x: 50, y: 90, w: 16, h: 65, colorIdx: 0, opacity: 0.07, rot: -12, driftX: 30, driftY: 20, driftDur: 20, rotDur: 25, delay: 2.2, blur: 8, scale: 1 },
+
+    // Tiny subtle bubbles
+    { x: 30, y: 35, w: 8, h: 35, colorIdx: 2, opacity: 0.05, rot: 40, driftX: 40, driftY: 50, driftDur: 14, rotDur: 18, delay: 5, blur: 4, scale: 1 },
+    { x: 60, y: 60, w: 10, h: 40, colorIdx: 1, opacity: 0.05, rot: -18, driftX: 35, driftY: 30, driftDur: 25, rotDur: 22, delay: 4.5, blur: 4, scale: 1 },
+    { x: 95, y: 85, w: 10, h: 42, colorIdx: 0, opacity: 0.06, rot: 22, driftX: 25, driftY: 35, driftDur: 19, rotDur: 27, delay: 2.8, blur: 6, scale: 1 },
+    { x: 3, y: 75, w: 12, h: 52, colorIdx: 1, opacity: 0.07, rot: -25, driftX: 30, driftY: 25, driftDur: 22, rotDur: 30, delay: 1, blur: 6, scale: 1 },
+    { x: 42, y: 5, w: 10, h: 38, colorIdx: 2, opacity: 0.05, rot: 10, driftX: 35, driftY: 40, driftDur: 16, rotDur: 20, delay: 3.2, blur: 4, scale: 1 },
+  ]
+
+  presets.forEach((p, i) => {
+    configs.push({
+      id: i,
+      x: p.x,
+      y: p.y,
+      width: p.w,
+      height: p.h,
+      color: BRAND_COLORS[p.colorIdx],
+      opacity: p.opacity,
+      rotation: p.rot,
+      driftX: p.driftX,
+      driftY: p.driftY,
+      driftDuration: p.driftDur,
+      rotateDuration: p.rotDur,
+      delay: p.delay,
+      blur: p.blur,
+      scale: p.scale,
+    })
+  })
+
+  return configs
 }
 
-float fbm(vec2 p) {
-  float v = 0.0;
-  float a = 0.5;
-  for (int i = 0; i < 4; i++) {
-    v += a * noise(p);
-    p *= 2.0;
-    a *= 0.5;
-  }
-  return v;
-}
+const BUBBLES = generateBubbles()
 
-float roundedRectSDF(vec2 p, vec2 halfSize, float radius) {
-  vec2 d = abs(p) - halfSize + vec2(radius);
-  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
-}
-
-void main() {
-  vec2 uv = vUv;
-  float aspect = uResolution.x / uResolution.y;
-
-  vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
-
-  float rotTime = uTime * 0.25;
-  float rotX = sin(rotTime) * 0.05;
-  float rotY = sin(rotTime * 0.77) * 0.035;
-
-  rotX += (uMouse.y - 0.5) * 0.025;
-  rotY += (uMouse.x - 0.5) * 0.04;
-
-  p.x += rotY * p.y * 0.4;
-  p.y += rotX * p.x * 0.3;
-  float perspScale = 1.0 + rotX * p.y * 0.15;
-  p *= perspScale;
-
-  float barWidth = 0.075;
-  float gap = 0.025;
-  float radius = barWidth * 0.5;
-
-  float bar1Height = 0.42;
-  vec2 bar1Center = vec2(-(barWidth + gap), 0.0);
-  vec3 bar1Color = vec3(0.337, 0.722, 0.871);
-  float bar1Glow = 0.75;
-
-  float bar2Height = 0.57;
-  vec2 bar2Center = vec2(0.0, 0.0);
-  vec3 bar2Color = vec3(0.180, 0.604, 0.769);
-  float bar2Glow = 1.0;
-
-  float bar3Height = 0.46;
-  vec2 bar3Center = vec2(barWidth + gap, 0.0);
-  vec3 bar3Color = vec3(0.106, 0.494, 0.651);
-  float bar3Glow = 0.65;
-
-  float grain = fbm(uv * 200.0) * 0.1;
-  float fineGrain = noise(uv * 400.0) * 0.05;
-  float totalGrain = grain + fineGrain;
-
-  vec3 finalColor = vec3(1.0);
-
-  // BAR 1
-  {
-    vec2 localP = p - bar1Center;
-    vec2 halfSize = vec2(barWidth * 0.5, bar1Height * 0.5);
-    float dist = roundedRectSDF(localP, halfSize, radius);
-    float haloStrength = exp(-dist * dist / 0.003) * bar1Glow * 0.25;
-    if (dist < 0.0) {
-      float edgeDist = -dist;
-      float gradientLR = smoothstep(-halfSize.x, halfSize.x, localP.x);
-      float brightness = mix(0.25, 0.95, gradientLR) * bar1Glow;
-      float edgeGlow = smoothstep(halfSize.x - barWidth * 0.12, halfSize.x, localP.x + dist * 0.5);
-      edgeGlow *= smoothstep(0.0, 0.01, edgeDist);
-      brightness += edgeGlow * 1.3;
-      brightness += totalGrain * brightness * 0.5;
-      float gradientTB = smoothstep(-halfSize.y, halfSize.y, localP.y);
-      brightness *= mix(0.8, 1.1, gradientTB);
-      vec3 barColor = bar1Color * brightness;
-      barColor = mix(barColor, vec3(1.0), edgeGlow * 0.35);
-      float alpha = smoothstep(0.0, 0.003, edgeDist);
-      finalColor = mix(finalColor, barColor, alpha);
-    } else {
-      finalColor = mix(finalColor, bar1Color * 0.6, haloStrength);
-    }
-  }
-
-  // BAR 2
-  {
-    vec2 localP = p - bar2Center;
-    vec2 halfSize = vec2(barWidth * 0.5, bar2Height * 0.5);
-    float dist = roundedRectSDF(localP, halfSize, radius);
-    float haloStrength = exp(-dist * dist / 0.004) * bar2Glow * 0.3;
-    if (dist < 0.015 && dist > 0.0) {
-      float shadowStrength = smoothstep(0.015, 0.0, dist) * 0.3;
-      finalColor *= (1.0 - shadowStrength);
-    }
-    if (dist < 0.0) {
-      float edgeDist = -dist;
-      float gradientLR = smoothstep(-halfSize.x, halfSize.x, localP.x);
-      float brightness = mix(0.3, 1.0, gradientLR) * bar2Glow;
-      float edgeGlow = smoothstep(halfSize.x - barWidth * 0.12, halfSize.x, localP.x + dist * 0.5);
-      edgeGlow *= smoothstep(0.0, 0.01, edgeDist);
-      brightness += edgeGlow * 1.5;
-      brightness += totalGrain * brightness * 0.5;
-      float gradientTB = smoothstep(-halfSize.y, halfSize.y, localP.y);
-      brightness *= mix(0.85, 1.15, gradientTB);
-      vec3 barColor = bar2Color * brightness;
-      barColor = mix(barColor, vec3(1.0), edgeGlow * 0.45);
-      float alpha = smoothstep(0.0, 0.003, edgeDist);
-      finalColor = mix(finalColor, barColor, alpha);
-    } else if (haloStrength > 0.005) {
-      finalColor = mix(finalColor, bar2Color * 0.5, haloStrength);
-    }
-  }
-
-  // BAR 3
-  {
-    vec2 localP = p - bar3Center;
-    vec2 halfSize = vec2(barWidth * 0.5, bar3Height * 0.5);
-    float dist = roundedRectSDF(localP, halfSize, radius);
-    float haloStrength = exp(-dist * dist / 0.003) * bar3Glow * 0.25;
-    if (dist < 0.015 && dist > 0.0) {
-      float shadowStrength = smoothstep(0.015, 0.0, dist) * 0.25;
-      finalColor *= (1.0 - shadowStrength);
-    }
-    if (dist < 0.0) {
-      float edgeDist = -dist;
-      float gradientLR = smoothstep(-halfSize.x, halfSize.x, localP.x);
-      float brightness = mix(0.2, 0.9, gradientLR) * bar3Glow;
-      float edgeGlow = smoothstep(halfSize.x - barWidth * 0.12, halfSize.x, localP.x + dist * 0.5);
-      edgeGlow *= smoothstep(0.0, 0.01, edgeDist);
-      brightness += edgeGlow * 1.3;
-      brightness += totalGrain * brightness * 0.5;
-      float gradientTB = smoothstep(-halfSize.y, halfSize.y, localP.y);
-      brightness *= mix(0.8, 1.1, gradientTB);
-      vec3 barColor = bar3Color * brightness;
-      barColor = mix(barColor, vec3(1.0), edgeGlow * 0.3);
-      float alpha = smoothstep(0.0, 0.003, edgeDist);
-      finalColor = mix(finalColor, barColor, alpha);
-    } else if (haloStrength > 0.005) {
-      finalColor = mix(finalColor, bar3Color * 0.5, haloStrength);
-    }
-  }
-
-  float vig = 1.0 - smoothstep(0.4, 1.0, length((uv - 0.5) * 1.8));
-  finalColor = mix(vec3(1.0), finalColor, vig * 0.15 + 0.85);
-
-  gl_FragColor = vec4(finalColor, 1.0);
-}
-`
-
-/* ============================================
-   GLOWING BARS 3D COMPONENT
-   ============================================ */
-
-function GlowingBars3D({ isMobile, isTablet }: { isMobile: boolean; isTablet: boolean }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const disposedRef = useRef(false)
-
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-    disposedRef.current = false
-
-    let animId = 0
-    let renderer: any = null
-    let targetMouseX = 0.5
-    let targetMouseY = 0.5
-
-    async function init() {
-      const THREE = await import('three')
-      if (disposedRef.current || !container) return
-
-      const w = container.clientWidth
-      const h = container.clientHeight
-      if (w === 0 || h === 0) return
-
-      const scene = new THREE.Scene()
-      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
-
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
-      const pixelRatio = isMobile ? 1 : Math.min(window.devicePixelRatio, 2)
-      renderer.setPixelRatio(pixelRatio)
-      renderer.setSize(w, h)
-      renderer.setClearColor(0xFFFFFF, 1)
-      container.appendChild(renderer.domElement)
-
-      const uniforms = {
-        uTime: { value: 0 },
-        uResolution: { value: new THREE.Vector2(w, h) },
-        uMouse: { value: new THREE.Vector2(0.5, 0.5) },
-      }
-
-      const geo = new THREE.PlaneGeometry(2, 2)
-      const mat = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms })
-      scene.add(new THREE.Mesh(geo, mat))
-
-      // Mouse tracking
-      const onMouse = (e: MouseEvent) => {
-        targetMouseX = e.clientX / window.innerWidth
-        targetMouseY = e.clientY / window.innerHeight
-      }
-      window.addEventListener('mousemove', onMouse)
-
-      // Debounced resize
-      let resizeTimer: ReturnType<typeof setTimeout>
-      const onResize = () => {
-        clearTimeout(resizeTimer)
-        resizeTimer = setTimeout(() => {
-          if (disposedRef.current || !container || !renderer) return
-          const nw = container.clientWidth
-          const nh = container.clientHeight
-          if (nw === 0 || nh === 0) return
-          renderer.setSize(nw, nh)
-          uniforms.uResolution.value.set(nw, nh)
-        }, 200)
-      }
-      window.addEventListener('resize', onResize)
-
-      // Render loop
-      function tick(time: number) {
-        if (disposedRef.current) return
-        animId = requestAnimationFrame(tick)
-        uniforms.uTime.value = time * 0.001
-        uniforms.uMouse.value.x += (targetMouseX - uniforms.uMouse.value.x) * 0.02
-        uniforms.uMouse.value.y += (targetMouseY - uniforms.uMouse.value.y) * 0.02
-        renderer.render(scene, camera)
-      }
-      animId = requestAnimationFrame(tick)
-
-      return () => {
-        cancelAnimationFrame(animId)
-        window.removeEventListener('mousemove', onMouse)
-        window.removeEventListener('resize', onResize)
-        clearTimeout(resizeTimer)
-        geo.dispose()
-        mat.dispose()
-        renderer.dispose()
-        if (container.contains(renderer.domElement)) {
-          container.removeChild(renderer.domElement)
+function GlassBarBubbles({ show }: { show: boolean }) {
+  return (
+    <>
+      <style>{`
+        @keyframes bubbleDrift {
+          0%, 100% { transform: var(--drift-from); }
+          25% { transform: var(--drift-q1); }
+          50% { transform: var(--drift-to); }
+          75% { transform: var(--drift-q3); }
         }
-        renderer = null
-      }
-    }
+      `}</style>
+      {BUBBLES.map((b) => {
+        // Create a unique, organic drift path for each bubble
+        const driftFrom = `translate(0px, 0px) rotate(${b.rotation}deg) scale(${b.scale})`
+        const driftQ1 = `translate(${b.driftX * 0.7}px, ${-b.driftY}px) rotate(${b.rotation + 8}deg) scale(${b.scale * 1.02})`
+        const driftTo = `translate(${b.driftX}px, ${b.driftY * 0.3}px) rotate(${b.rotation - 5}deg) scale(${b.scale})`
+        const driftQ3 = `translate(${-b.driftX * 0.4}px, ${b.driftY}px) rotate(${b.rotation + 3}deg) scale(${b.scale * 0.98})`
 
-    let cleanup: (() => void) | undefined
-    init().then((fn) => { cleanup = fn })
-
-    return () => {
-      disposedRef.current = true
-      cleanup?.()
-    }
-  }, [isMobile])
-
-  const containerStyle: React.CSSProperties = isMobile
-    ? {
-        position: 'relative',
-        width: '100%',
-        height: '40vh',
-        zIndex: 0,
-        overflow: 'hidden',
-      }
-    : isTablet
-    ? {
-        position: 'relative',
-        width: '100%',
-        height: '50vh',
-        zIndex: 0,
-        overflow: 'hidden',
-      }
-    : {
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        width: '58%',
-        height: '100%',
-        zIndex: 0,
-        overflow: 'hidden',
-      }
-
-  return <div ref={containerRef} style={containerStyle} />
-}
-
-/* ============================================
-   COUNTER ANIMATION HOOK
-   ============================================ */
-
-function useCounterAnimation(
-  targetStr: string,
-  shouldAnimate: boolean,
-  duration: number = 1500
-): string {
-  const [display, setDisplay] = useState(targetStr)
-  const hasAnimated = useRef(false)
-  const elementRef = useRef<HTMLDivElement>(null)
-
-  // Parse the numeric part and prefix/suffix
-  const parsed = useMemo(() => {
-    const match = targetStr.match(/^([^0-9]*)([0-9]+(?:\.[0-9]+)?)(.*)$/)
-    if (!match) return null
-    return {
-      prefix: match[1],
-      number: parseFloat(match[2]),
-      suffix: match[3],
-      isFloat: match[2].includes('.'),
-    }
-  }, [targetStr])
-
-  useEffect(() => {
-    if (!shouldAnimate || !parsed || hasAnimated.current) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true
-          observer.disconnect()
-
-          const startTime = performance.now()
-          const target = parsed.number
-
-          const animate = (now: number) => {
-            const elapsed = now - startTime
-            const progress = Math.min(elapsed / duration, 1)
-            // Ease out cubic
-            const eased = 1 - Math.pow(1 - progress, 3)
-            const current = eased * target
-
-            if (parsed!.isFloat) {
-              setDisplay(`${parsed!.prefix}${current.toFixed(1)}${parsed!.suffix}`)
-            } else {
-              setDisplay(`${parsed!.prefix}${Math.round(current)}${parsed!.suffix}`)
-            }
-
-            if (progress < 1) {
-              requestAnimationFrame(animate)
-            } else {
-              setDisplay(targetStr)
-            }
-          }
-
-          requestAnimationFrame(animate)
-        }
-      },
-      { threshold: 0.3 }
-    )
-
-    // We need to observe something — use a small delay to ensure ref is set
-    const el = elementRef.current
-    if (el) observer.observe(el)
-
-    return () => observer.disconnect()
-  }, [shouldAnimate, parsed, duration, targetStr])
-
-  return display
+        return (
+          <div
+            key={b.id}
+            style={{
+              position: 'absolute',
+              left: `${b.x}%`,
+              top: `${b.y}%`,
+              width: b.width,
+              height: b.height,
+              borderRadius: b.width / 2,
+              // Frosted glass effect
+              background: `linear-gradient(
+                135deg,
+                ${b.color}${Math.round(b.opacity * 255 * 1.5).toString(16).padStart(2, '0')} 0%,
+                ${b.color}${Math.round(b.opacity * 255 * 0.6).toString(16).padStart(2, '0')} 40%,
+                ${b.color}${Math.round(b.opacity * 255 * 1.2).toString(16).padStart(2, '0')} 100%
+              )`,
+              backdropFilter: `blur(${b.blur}px)`,
+              WebkitBackdropFilter: `blur(${b.blur}px)`,
+              border: `1px solid ${b.color}${Math.round(b.opacity * 255 * 0.8).toString(16).padStart(2, '0')}`,
+              boxShadow: `
+                inset 0 1px 1px rgba(255,255,255,${b.opacity * 3}),
+                inset 0 -1px 1px ${b.color}${Math.round(b.opacity * 255 * 0.5).toString(16).padStart(2, '0')},
+                0 4px ${b.blur * 2}px ${b.color}${Math.round(b.opacity * 255 * 0.4).toString(16).padStart(2, '0')}
+              `,
+              opacity: show ? 1 : 0,
+              transition: `opacity 1.2s ease ${b.delay}s`,
+              pointerEvents: 'none',
+              willChange: 'transform',
+              // Animation via CSS custom properties
+              ['--drift-from' as string]: driftFrom,
+              ['--drift-q1' as string]: driftQ1,
+              ['--drift-to' as string]: driftTo,
+              ['--drift-q3' as string]: driftQ3,
+              animation: show
+                ? `bubbleDrift ${b.driftDuration}s ease-in-out ${b.delay}s infinite`
+                : 'none',
+              zIndex: 0,
+            }}
+          />
+        )
+      })}
+    </>
+  )
 }
 
 /* ============================================
@@ -422,12 +182,7 @@ function MetricItem({
   shouldAnimate: boolean
   isMobile: boolean
 }) {
-  const display = useCounterAnimation(metric.value, shouldAnimate)
   const ref = useRef<HTMLDivElement>(null)
-
-  // Expose ref for IntersectionObserver in hook — we actually need to wire it differently
-  // The hook uses its own internal ref, so let's inline the counter logic here instead
-
   const [counterDisplay, setCounterDisplay] = useState(metric.value)
   const hasAnimated = useRef(false)
 
@@ -461,10 +216,10 @@ function MetricItem({
             const eased = 1 - Math.pow(1 - progress, 3)
             const current = eased * target
 
-            if (parsed!.isFloat) {
-              setCounterDisplay(`${parsed!.prefix}${current.toFixed(1)}${parsed!.suffix}`)
+            if (parsed.isFloat) {
+              setCounterDisplay(`${parsed.prefix}${current.toFixed(1)}${parsed.suffix}`)
             } else {
-              setCounterDisplay(`${parsed!.prefix}${Math.round(current)}${parsed!.suffix}`)
+              setCounterDisplay(`${parsed.prefix}${Math.round(current)}${parsed.suffix}`)
             }
 
             if (progress < 1) {
@@ -527,15 +282,11 @@ function MetricItem({
 function MagneticButton({
   children,
   href,
-  style,
-  onMouseEnter,
-  onMouseLeave,
+  style: styleProp,
 }: {
   children: React.ReactNode
   href: string
   style: React.CSSProperties
-  onMouseEnter?: () => void
-  onMouseLeave?: () => void
 }) {
   const btnRef = useRef<HTMLAnchorElement>(null)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -550,29 +301,22 @@ function MagneticButton({
     setOffset({ x, y })
   }, [])
 
-  const handleEnter = useCallback(() => {
-    setHovered(true)
-    setSweepX(-100)
-    // Trigger sweep animation
-    requestAnimationFrame(() => setSweepX(200))
-    onMouseEnter?.()
-  }, [onMouseEnter])
-
-  const handleLeave = useCallback(() => {
-    setHovered(false)
-    setOffset({ x: 0, y: 0 })
-    onMouseLeave?.()
-  }, [onMouseLeave])
-
   return (
     <a
       ref={btnRef}
       href={href}
       onMouseMove={handleMouseMove}
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
+      onMouseEnter={() => {
+        setHovered(true)
+        setSweepX(-100)
+        requestAnimationFrame(() => setSweepX(200))
+      }}
+      onMouseLeave={() => {
+        setHovered(false)
+        setOffset({ x: 0, y: 0 })
+      }}
       style={{
-        ...style,
+        ...styleProp,
         transform: hovered
           ? `translate(${offset.x}px, ${offset.y - 2}px)`
           : 'translate(0, 0)',
@@ -584,7 +328,6 @@ function MagneticButton({
         overflow: 'hidden',
       }}
     >
-      {/* Shiny sweep overlay */}
       <span
         style={{
           position: 'absolute',
@@ -606,7 +349,7 @@ function MagneticButton({
 }
 
 /* ============================================
-   SCROLL INDICATOR COMPONENT
+   SCROLL INDICATOR
    ============================================ */
 
 function ScrollIndicator({ show }: { show: boolean }) {
@@ -614,9 +357,7 @@ function ScrollIndicator({ show }: { show: boolean }) {
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollY = window.scrollY
-      const newOpacity = Math.max(0, 0.5 - scrollY / 200)
-      setOpacity(newOpacity)
+      setOpacity(Math.max(0, 0.5 - window.scrollY / 200))
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
@@ -677,9 +418,6 @@ function ScrollIndicator({ show }: { show: boolean }) {
 export default function Hero({ introComplete }: HeroProps) {
   const [show, setShow] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [isTablet, setIsTablet] = useState(false)
-  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 })
-  const heroRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     if (introComplete) {
@@ -689,43 +427,17 @@ export default function Hero({ introComplete }: HeroProps) {
   }, [introComplete])
 
   useEffect(() => {
-    const check = () => {
-      const w = window.innerWidth
-      setIsMobile(w < 768)
-      setIsTablet(w >= 768 && w <= 1024)
-    }
+    const check = () => setIsMobile(window.innerWidth < 768)
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Desktop mouse tilt for headline
-  useEffect(() => {
-    if (isMobile || isTablet) return
-    const handleMouse = (e: MouseEvent) => {
-      setMousePos({
-        x: e.clientX / window.innerWidth,
-        y: e.clientY / window.innerHeight,
-      })
-    }
-    window.addEventListener('mousemove', handleMouse)
-    return () => window.removeEventListener('mousemove', handleMouse)
-  }, [isMobile, isTablet])
-
-  const isDesktop = !isMobile && !isTablet
-
-  // Headline tilt transform
-  const headlineTilt = isDesktop
-    ? `perspective(1000px) rotateY(${(mousePos.x - 0.5) * 3}deg) rotateX(${(0.5 - mousePos.y) * 3}deg)`
-    : undefined
-
-  // Headline lines for stagger
   const headlineLines = ['E-Commerce Brands', 'wachsen mit uns', 'unaufhaltbar.']
 
   return (
     <section
       id="hero"
-      ref={heroRef}
       style={{
         position: 'relative',
         width: '100%',
@@ -734,9 +446,10 @@ export default function Hero({ introComplete }: HeroProps) {
         background: '#FFFFFF',
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
-      {/* Pulse animation for badge dot */}
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -744,302 +457,268 @@ export default function Hero({ introComplete }: HeroProps) {
         }
       `}</style>
 
-      {/* Main hero area */}
+      {/* Floating Glass Bar Bubbles — behind everything */}
+      <GlassBarBubbles show={show} />
+
+      {/* Centered Content */}
       <div
         style={{
           position: 'relative',
-          width: '100%',
-          minHeight: '100vh',
+          zIndex: 2,
           display: 'flex',
-          flexDirection: isMobile || isTablet ? 'column' : 'row',
-          alignItems: isMobile || isTablet ? 'stretch' : 'center',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          padding: isMobile ? '120px 24px 60px' : '0 48px',
+          maxWidth: 960,
+          width: '100%',
         }}
       >
-        {/* Mobile gradient fallback behind 3D area */}
-        {isMobile && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 0,
-              background:
-                'radial-gradient(ellipse at 70% 40%, rgba(46,154,196,0.08) 0%, transparent 60%), radial-gradient(ellipse at 50% 80%, rgba(86,184,222,0.05) 0%, transparent 50%)',
-              pointerEvents: 'none',
-            }}
-          />
-        )}
-
-        {/* Left: Text Content */}
-        <div
+        {/* Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={show ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5, delay: 0.2, ease: EASE_OUT_EXPO }}
           style={{
-            position: 'relative',
-            zIndex: 2,
-            width: isMobile || isTablet ? '100%' : '42%',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            padding: isMobile
-              ? '120px 24px 48px'
-              : isTablet
-              ? '120px 48px 48px'
-              : '0 0 0 clamp(48px, 8vw, 120px)',
-            minHeight: isMobile || isTablet ? 'auto' : '100vh',
-            textAlign: isMobile ? 'center' : 'left',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 14px',
+            background: 'rgba(46,154,196,0.06)',
+            border: '1px solid rgba(46,154,196,0.12)',
+            borderRadius: 999,
+            marginBottom: 28,
           }}
         >
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={show ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, delay: 0.2, ease: EASE_OUT_EXPO }}
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#2E9AC4',
+              flexShrink: 0,
+              animation: 'pulse 2s ease-in-out infinite',
+            }}
+          />
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              fontWeight: 500,
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase' as const,
+              color: '#2E9AC4',
+            }}
+          >
+            E-COMMERCE GROWTH AGENCY &middot; &euro;1B+ PORTFOLIO
+          </span>
+        </motion.div>
+
+        {/* Headline — Centered */}
+        <h1
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: 'clamp(40px, 7vw, 88px)',
+            lineHeight: 0.95,
+            letterSpacing: '-0.03em',
+            color: '#1A1A2E',
+            margin: 0,
+          }}
+        >
+          {headlineLines.map((line, i) => (
+            <motion.span
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              animate={show ? { opacity: 1, y: 0 } : {}}
+              transition={{
+                duration: 0.6,
+                delay: 0.4 + i * 0.12,
+                ease: EASE_OUT_EXPO,
+              }}
+              style={{ display: 'block' }}
+            >
+              {line === 'unaufhaltbar.' ? (
+                <span className="text-blue-gradient text-shimmer">{line}</span>
+              ) : (
+                line
+              )}
+            </motion.span>
+          ))}
+        </h1>
+
+        {/* Subheadline */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={show ? { opacity: 1 } : {}}
+          transition={{ duration: 0.6, delay: 0.8, ease: EASE_OUT_EXPO }}
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 400,
+            fontSize: 'clamp(16px, 1.5vw, 20px)',
+            lineHeight: 1.65,
+            color: '#4A5568',
+            maxWidth: 520,
+            marginTop: 24,
+          }}
+        >
+          Wir sind der Growth-Partner f&uuml;r ambitionierte E-Commerce Brands, die bereit sind, Marktf&uuml;hrer zu werden.
+        </motion.p>
+
+        {/* CTA Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={show ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5, delay: 1.0, ease: EASE_OUT_EXPO }}
+          style={{
+            display: 'flex',
+            gap: 12,
+            marginTop: 32,
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+          }}
+        >
+          <MagneticButton
+            href="#contact"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              alignSelf: isMobile ? 'center' : 'flex-start',
-              gap: 8,
-              padding: '6px 14px',
-              background: 'rgba(46,154,196,0.06)',
-              border: '1px solid rgba(46,154,196,0.12)',
-              borderRadius: 999,
-              marginBottom: 24,
+              padding: '16px 32px',
+              background: 'linear-gradient(135deg, #56B8DE 0%, #2E9AC4 50%, #1B7EA6 100%)',
+              color: '#FFF',
+              borderRadius: 12,
+              fontFamily: 'var(--font-display)',
+              fontWeight: 600,
+              fontSize: 15,
+              textDecoration: 'none',
+              cursor: 'pointer',
+              border: 'none',
             }}
           >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: '#2E9AC4',
-                flexShrink: 0,
-                animation: 'pulse 2s ease-in-out infinite',
-              }}
-            />
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                fontWeight: 500,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase' as const,
-                color: '#2E9AC4',
-              }}
-            >
-              E-COMMERCE GROWTH AGENCY &middot; &euro;1B+ PORTFOLIO
-            </span>
-          </motion.div>
+            Kostenloses Audit
+            <span style={{ marginLeft: 4, fontSize: 16 }}>&rarr;</span>
+          </MagneticButton>
 
-          {/* Headline — line-by-line stagger */}
-          <h1
+          <a
+            href="#cases"
             style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              fontSize: 'clamp(48px, 7vw, 96px)',
-              lineHeight: 0.95,
-              letterSpacing: '-0.03em',
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '16px 32px',
+              background: 'transparent',
               color: '#1A1A2E',
-              margin: 0,
-              transform: headlineTilt,
-              transition: 'transform 0.15s ease-out',
-              willChange: isDesktop ? 'transform' : undefined,
-            }}
-          >
-            {headlineLines.map((line, i) => (
-              <motion.span
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                animate={show ? { opacity: 1, y: 0 } : {}}
-                transition={{
-                  duration: 0.6,
-                  delay: 0.4 + i * 0.12,
-                  ease: EASE_OUT_EXPO,
-                }}
-                style={{ display: 'block' }}
-              >
-                {line === 'unaufhaltbar.' ? (
-                  <span className="text-blue-gradient text-shimmer">{line}</span>
-                ) : (
-                  line
-                )}
-              </motion.span>
-            ))}
-          </h1>
-
-          {/* Subheadline */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={show ? { opacity: 1 } : {}}
-            transition={{ duration: 0.6, delay: 0.8, ease: EASE_OUT_EXPO }}
-            style={{
+              borderRadius: 12,
               fontFamily: 'var(--font-display)',
-              fontWeight: 400,
-              fontSize: 'clamp(16px, 1.5vw, 20px)',
-              lineHeight: 1.65,
-              color: '#4A5568',
-              maxWidth: 480,
-              marginTop: 20,
+              fontWeight: 600,
+              fontSize: 15,
+              textDecoration: 'none',
+              cursor: 'pointer',
+              border: '1.5px solid rgba(26,26,46,0.15)',
+              transition: 'all 200ms ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#2E9AC4'
+              e.currentTarget.style.color = '#2E9AC4'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(26,26,46,0.15)'
+              e.currentTarget.style.color = '#1A1A2E'
             }}
           >
-            Wir sind der Growth-Partner f&uuml;r ambitionierte E-Commerce Brands, die bereit sind, Marktf&uuml;hrer zu werden.
-          </motion.p>
+            Case Studies
+          </a>
+        </motion.div>
 
-          {/* CTA Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={show ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, delay: 1.0, ease: EASE_OUT_EXPO }}
-            style={{
-              display: 'flex',
-              gap: 12,
-              marginTop: 28,
-              flexWrap: 'wrap',
-              justifyContent: isMobile ? 'center' : 'flex-start',
-            }}
-          >
-            <MagneticButton
-              href="#contact"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '16px 32px',
-                background: 'linear-gradient(135deg, #56B8DE 0%, #2E9AC4 50%, #1B7EA6 100%)',
-                color: '#FFF',
-                borderRadius: 12,
-                fontFamily: 'var(--font-display)',
-                fontWeight: 600,
-                fontSize: 15,
-                textDecoration: 'none',
-                cursor: 'pointer',
-                border: 'none',
-              }}
-            >
-              Kostenloses Audit
-              <span style={{ marginLeft: 4, fontSize: 16 }}>&rarr;</span>
-            </MagneticButton>
+        {/* Metrics Dashboard */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={show ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 1.2, ease: EASE_OUT_EXPO }}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+            gap: 24,
+            marginTop: 48,
+            textAlign: 'left',
+          }}
+        >
+          {HERO_METRICS.map((metric, i) => (
+            <MetricItem
+              key={metric.label}
+              metric={metric}
+              index={isMobile ? i % 2 : i}
+              shouldAnimate={show}
+              isMobile={isMobile}
+            />
+          ))}
+        </motion.div>
 
-            <a
-              href="#cases"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '16px 32px',
-                background: 'transparent',
-                color: '#1A1A2E',
-                borderRadius: 12,
-                fontFamily: 'var(--font-display)',
-                fontWeight: 600,
-                fontSize: 15,
-                textDecoration: 'none',
-                cursor: 'pointer',
-                border: '1.5px solid rgba(26,26,46,0.15)',
-                transition: 'all 200ms ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#2E9AC4'
-                e.currentTarget.style.color = '#2E9AC4'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(26,26,46,0.15)'
-                e.currentTarget.style.color = '#1A1A2E'
-              }}
-            >
-              Case Studies
-            </a>
-          </motion.div>
-
-          {/* Metrics Dashboard */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={show ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 1.2, ease: EASE_OUT_EXPO }}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-              gap: 24,
-              marginTop: 48,
-            }}
-          >
-            {HERO_METRICS.map((metric, i) => (
-              <MetricItem
-                key={metric.label}
-                metric={metric}
-                index={isMobile ? i % 2 : i}
-                shouldAnimate={show}
-                isMobile={isMobile}
-              />
-            ))}
-          </motion.div>
-        </div>
-
-        {/* Right: 3D Shader */}
-        <GlowingBars3D isMobile={isMobile} isTablet={isTablet} />
-
-        {/* Scroll Indicator */}
-        <ScrollIndicator show={show} />
-      </div>
-
-      {/* Trusted By Section — Full Width */}
-      <div
-        style={{
-          width: '100%',
-          borderTop: '1px solid rgba(226,232,240,0.5)',
-          padding: '32px clamp(24px, 5vw, 80px)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
-          alignItems: isMobile ? 'center' : 'flex-start',
-        }}
-      >
-        <motion.span
+        {/* Trusted By */}
+        <motion.div
           initial={{ opacity: 0 }}
           animate={show ? { opacity: 1 } : {}}
-          transition={{ duration: 0.5, delay: 1.4, ease: EASE_OUT_EXPO }}
+          transition={{ duration: 0.6, delay: 1.4, ease: EASE_OUT_EXPO }}
           style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            fontWeight: 500,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase' as const,
-            color: '#94A3B8',
-          }}
-        >
-          TRUSTED BY
-        </motion.span>
-
-        <div
-          style={{
+            marginTop: 56,
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            gap: 'clamp(24px, 4vw, 48px)',
-            flexWrap: 'wrap',
-            justifyContent: isMobile ? 'center' : 'flex-start',
+            gap: 14,
+            width: '100%',
           }}
         >
-          {TRUSTED_BRANDS.map((brand, i) => (
-            <motion.span
-              key={brand.name}
-              initial={{ opacity: 0 }}
-              animate={show ? { opacity: 0.7 } : {}}
-              transition={{
-                duration: 0.4,
-                delay: 1.5 + i * 0.05,
-                ease: EASE_OUT_EXPO,
-              }}
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 700,
-                fontSize: 14,
-                letterSpacing: '0.05em',
-                color: brand.color,
-                cursor: 'default',
-                transition: 'opacity 200ms ease',
-              }}
-              whileHover={{ opacity: 1 }}
-            >
-              {brand.name}
-            </motion.span>
-          ))}
-        </div>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              fontWeight: 500,
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase' as const,
+              color: '#94A3B8',
+            }}
+          >
+            TRUSTED BY
+          </span>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'clamp(20px, 3vw, 40px)',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+            }}
+          >
+            {TRUSTED_BRANDS.map((brand, i) => (
+              <motion.span
+                key={brand.name}
+                initial={{ opacity: 0 }}
+                animate={show ? { opacity: 0.7 } : {}}
+                transition={{
+                  duration: 0.4,
+                  delay: 1.5 + i * 0.05,
+                  ease: EASE_OUT_EXPO,
+                }}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  letterSpacing: '0.05em',
+                  color: brand.color,
+                  cursor: 'default',
+                  transition: 'opacity 200ms ease',
+                }}
+                whileHover={{ opacity: 1 }}
+              >
+                {brand.name}
+              </motion.span>
+            ))}
+          </div>
+        </motion.div>
       </div>
+
+      {/* Scroll Indicator */}
+      <ScrollIndicator show={show} />
     </section>
   )
 }

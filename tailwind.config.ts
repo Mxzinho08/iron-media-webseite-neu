@@ -20,8 +20,8 @@ const config: Config = {
         'text-muted': '#CBD5E1',
       },
       fontFamily: {
-        display: ['Sora', 'system-ui', 'sans-serif'],
-        body: ['Sora', 'system-ui', 'sans-serif'],
+        display: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+        body: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       fontSize: {

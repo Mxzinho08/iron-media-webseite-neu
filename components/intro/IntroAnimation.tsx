@@ -31,17 +31,24 @@ const EASE_MEDIA = 'cubic-bezier(0.25, 1, 0.5, 1)'
 
 const IRON_LETTERS = ['I', 'R', 'O', 'N']
 
+const PHASE1_WORDS: { text: string; row: 1 | 2; isLevel?: boolean }[] = [
+  { text: 'We', row: 1 },
+  { text: 'scale', row: 1 },
+  { text: 'Ecom', row: 1 },
+  { text: 'Brands', row: 1 },
+  { text: 'aufs', row: 2 },
+  { text: 'nächste', row: 2 },
+  { text: 'Level', row: 2, isLevel: true },
+]
+
+const WORD_TIMINGS = [400, 500, 600, 700, 850, 950, 1050]
+
 const KEYFRAMES_CSS = `
-@keyframes bounceIn {
-  0%   { opacity: 0; transform: translateY(-30px) scale(0.97); }
-  60%  { opacity: 1; transform: translateY(4px) scale(1.01); }
-  80%  { transform: translateY(-2px) scale(0.995); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes bounceInSmall {
-  0%   { opacity: 0; transform: translateY(-25px) scale(0.97); }
-  60%  { opacity: 1; transform: translateY(3px) scale(1.01); }
-  80%  { transform: translateY(-1.5px) scale(0.995); }
+@keyframes wordBounce {
+  0%   { opacity: 0; transform: translateY(-25px) scale(0.95); }
+  50%  { opacity: 1; transform: translateY(5px) scale(1.02); }
+  70%  { transform: translateY(-2px) scale(0.99); }
+  85%  { transform: translateY(1px) scale(1.005); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes bounceInChar {
@@ -56,6 +63,10 @@ const KEYFRAMES_CSS = `
   80%  { transform: scale(0.97) translateY(0.5px); }
   100% { opacity: 0.65; transform: scale(1) translateY(0); }
 }
+@keyframes radialPulse {
+  0%   { opacity: 1; transform: scale(0); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
 `
 
 // ─────────────────────────────────────────────
@@ -69,10 +80,8 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
 
   // Phase 1 refs
   const phase1Ref = useRef<HTMLDivElement>(null)
-  const line1Ref = useRef<HTMLDivElement>(null)
-  const line2Ref = useRef<HTMLDivElement>(null)
-  const line3Ref = useRef<HTMLDivElement>(null)
-  const underlineRef = useRef<HTMLSpanElement>(null)
+  const wordRefs = useRef<(HTMLSpanElement | null)[]>([])
+  const levelUnderlineRef = useRef<HTMLSpanElement>(null)
   const trustedByRef = useRef<HTMLDivElement>(null)
   const logoRefs = useRef<(HTMLImageElement | null)[]>([])
 
@@ -85,6 +94,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   const ironLetterRefs = useRef<(HTMLSpanElement | null)[]>([])
   const mediaRef = useRef<HTMLDivElement>(null)
   const ironContainerRef = useRef<HTMLDivElement>(null)
+  const radialPulseRef = useRef<HTMLDivElement>(null)
 
   const schedule = useCallback((fn: () => void, delay: number) => {
     const id = setTimeout(fn, delay)
@@ -129,10 +139,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   useEffect(() => {
     const phase1 = phase1Ref.current
     const phase2 = phase2Ref.current
-    const line1 = line1Ref.current
-    const line2 = line2Ref.current
-    const line3 = line3Ref.current
-    const underline = underlineRef.current
+    const levelUnderline = levelUnderlineRef.current
     const trustedBy = trustedByRef.current
     const bar1 = bar1Ref.current
     const bar2 = bar2Ref.current
@@ -140,26 +147,27 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     const barsGroup = barsGroupRef.current
     const media = mediaRef.current
     const ironContainer = ironContainerRef.current
+    const radialPulse = radialPulseRef.current
 
     if (
-      !phase1 || !phase2 || !line1 || !line2 || !line3 ||
-      !underline || !trustedBy || !bar1 || !bar2 || !bar3 ||
-      !barsGroup || !media || !ironContainer
+      !phase1 || !phase2 || !levelUnderline || !trustedBy ||
+      !bar1 || !bar2 || !bar3 || !barsGroup ||
+      !media || !ironContainer || !radialPulse
     ) return
 
     // ═══════════════════════════════════════════
     // INITIAL STATES
     // ═══════════════════════════════════════════
 
-    // Phase 1 elements: hidden
-    line1.style.opacity = '0'
-    line1.style.transform = 'translateY(-30px) scale(0.97)'
-    line2.style.opacity = '0'
-    line2.style.transform = 'translateY(-30px) scale(0.97)'
-    line3.style.opacity = '0'
-    line3.style.transform = 'translateY(-25px) scale(0.97)'
-    underline.style.transform = 'scaleX(0)'
-    underline.style.transformOrigin = 'left center'
+    // Phase 1 words: hidden
+    wordRefs.current.forEach((el) => {
+      if (!el) return
+      el.style.opacity = '0'
+      el.style.transform = 'translateY(-25px) scale(0.95)'
+    })
+
+    levelUnderline.style.transform = 'scaleX(0)'
+    levelUnderline.style.transformOrigin = 'left center'
     trustedBy.style.opacity = '0'
 
     logoRefs.current.forEach((el) => {
@@ -187,47 +195,44 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     media.style.letterSpacing = '0.8em'
     ironContainer.style.opacity = '1'
 
+    radialPulse.style.opacity = '0'
+    radialPulse.style.transform = 'scale(0)'
+
     // ═══════════════════════════════════════════
-    // PHASE 1: Statement + Trusted By (T=0 -> T=3200ms)
+    // PHASE 1: Statement + Trusted By (T=0 -> T=2900ms)
     // ═══════════════════════════════════════════
 
-    // T=400ms: "We" bounces in
-    schedule(() => {
-      line1.style.animation = 'bounceIn 600ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
-    }, 400)
+    // Word-by-word Pixar bounce
+    PHASE1_WORDS.forEach((_, i) => {
+      schedule(() => {
+        const el = wordRefs.current[i]
+        if (!el) return
+        el.style.animation = `wordBounce 500ms ${EASE_BOUNCY} forwards`
+      }, WORD_TIMINGS[i])
+    })
 
-    // T=550ms: "scale" bounces in (slightly slower)
+    // T=1200ms: Gradient underline on "Level" draws from left (300ms)
     schedule(() => {
-      line2.style.animation = 'bounceIn 700ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
-    }, 550)
+      levelUnderline.style.transition = `transform 300ms ${EASE_BOUNCY}`
+      levelUnderline.style.transform = 'scaleX(1)'
+    }, 1200)
 
-    // T=700ms: "eCom brands to the next level" bounces in
-    schedule(() => {
-      line3.style.animation = 'bounceInSmall 600ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
-    }, 700)
-
-    // T=850ms: Underline on "scale" draws from left
-    schedule(() => {
-      underline.style.transition = `transform 400ms ${EASE_BOUNCY}`
-      underline.style.transform = 'scaleX(1)'
-    }, 850)
-
-    // T=1300ms: "TRUSTED BY LEADING BRANDS" fades in (NOT bounce)
+    // T=1600ms: "TRUSTED BY LEADING BRANDS" fades in
     schedule(() => {
       trustedBy.style.transition = 'opacity 400ms ease-out'
       trustedBy.style.opacity = '0.5'
-    }, 1300)
+    }, 1600)
 
-    // T=1500ms: Brand logos bounce in with stagger
+    // T=1800ms: Brand logos bounce in with stagger (80ms apart)
     INTRO_LOGOS.forEach((_, i) => {
       schedule(() => {
         const el = logoRefs.current[i]
         if (!el) return
         el.style.animation = `logoBounceIn 450ms ${EASE_BOUNCY} forwards`
-      }, 1500 + i * 80)
+      }, 1800 + i * 80)
     })
 
-    // T=2900ms: Everything fades out
+    // T=2900ms: Everything fades out + scale(0.98)
     schedule(() => {
       phase1.style.transition = `opacity 300ms ${EASE_FADE}, transform 300ms ${EASE_FADE}`
       phase1.style.opacity = '0'
@@ -244,14 +249,14 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       phase2.style.pointerEvents = 'auto'
     }, 3200)
 
-    // T=3400ms: Bar 2 (center, tallest) FALLS from top
+    // T=3400ms: Bar 2 (center, tallest) falls from top
     schedule(() => {
       bar2.style.opacity = '1'
       bar2.style.transition = `transform 400ms ${EASE_BOUNCY}`
       bar2.style.transform = 'translateY(0)'
     }, 3400)
 
-    // Bar 2 squash & stretch on landing (T=3400 + 400 = T=3800)
+    // Bar 2 squash & stretch on landing (T=3800)
     schedule(() => {
       bar2.style.transition = 'transform 120ms ease-out'
       bar2.style.transform = 'scaleY(0.65) scaleX(1.35)'
@@ -273,14 +278,14 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       bar2.style.transform = 'scaleY(1) scaleX(1)'
     }, 4180)
 
-    // T=3650ms: Bar 1 flies from LEFT
+    // T=3650ms: Bar 1 flies from left with rotation
     schedule(() => {
       bar1.style.opacity = '1'
       bar1.style.transition = `transform 380ms ${EASE_BOUNCY}, opacity 150ms ease-out`
       bar1.style.transform = 'translateX(0) rotate(0deg)'
     }, 3650)
 
-    // Bar 1 settle (T=3650 + 380 = T=4030)
+    // Bar 1 settle
     schedule(() => {
       bar1.style.transition = 'transform 80ms ease-out'
       bar1.style.transform = 'scaleX(1.08)'
@@ -294,14 +299,14 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       bar1.style.transform = 'scaleX(1.0)'
     }, 4180)
 
-    // T=3850ms: Bar 3 flies from RIGHT
+    // T=3850ms: Bar 3 flies from right with rotation
     schedule(() => {
       bar3.style.opacity = '1'
       bar3.style.transition = `transform 380ms ${EASE_BOUNCY}, opacity 150ms ease-out`
       bar3.style.transform = 'translateX(0) rotate(0deg)'
     }, 3850)
 
-    // Bar 3 settle (T=3850 + 380 = T=4230)
+    // Bar 3 settle
     schedule(() => {
       bar3.style.transition = 'transform 80ms ease-out'
       bar3.style.transform = 'scaleX(1.08)'
@@ -331,7 +336,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       })
     }, 4225)
 
-    // T=4200ms: "IRON" character stagger (bounceIn)
+    // T=4200ms: "IRON" character stagger
     IRON_LETTERS.forEach((_, i) => {
       schedule(() => {
         const el = ironLetterRefs.current[i]
@@ -348,10 +353,10 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     }, 4400)
 
     // ═══════════════════════════════════════════
-    // PHASE 3: Transition to Hero (T=4700ms -> T=5500ms)
+    // PHASE 3: Blur & Dissolve Outro (T=4700ms -> T=5500ms)
     // ═══════════════════════════════════════════
 
-    // T=4700ms: "IRON" and "MEDIA" text fade out
+    // T=4700ms: "IRON" + "MEDIA" text fades out (200ms)
     schedule(() => {
       ironContainer.style.transition = `opacity 200ms ${EASE_FADE}`
       ironContainer.style.opacity = '0'
@@ -359,23 +364,43 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       media.style.opacity = '0'
     }, 4700)
 
-    // T=4800ms: Bars move right, scale up, become semi-transparent
+    // T=4900ms: Bars gentle rotation + blur + staggered fade
     schedule(() => {
-      barsGroup.style.transition = `transform 500ms ${EASE_OUT_EXPO}, opacity 500ms ${EASE_OUT_EXPO}`
-      barsGroup.style.transform = 'translateX(20vw) scale(11)'
-      barsGroup.style.opacity = '0.3'
-    }, 4800)
+      bar1.style.transition = 'opacity 300ms ease-out, filter 400ms ease-out, transform 400ms ease-out'
+      bar1.style.transform = 'rotate(5deg)'
+      bar1.style.filter = 'blur(8px)'
+      bar1.style.opacity = '0'
+    }, 4900)
 
-    // T=5000ms: Overlay background fades out
+    schedule(() => {
+      bar2.style.transition = 'opacity 300ms ease-out, filter 400ms ease-out, transform 400ms ease-out'
+      bar2.style.transform = 'rotate(-3deg)'
+      bar2.style.filter = 'blur(8px)'
+      bar2.style.opacity = '0'
+    }, 5000)
+
+    schedule(() => {
+      bar3.style.transition = 'opacity 300ms ease-out, filter 400ms ease-out, transform 400ms ease-out'
+      bar3.style.transform = 'rotate(4deg)'
+      bar3.style.filter = 'blur(8px)'
+      bar3.style.opacity = '0'
+    }, 5100)
+
+    // T=5100ms: Subtle radial light pulse
+    schedule(() => {
+      radialPulse.style.animation = 'radialPulse 400ms ease-out forwards'
+    }, 5100)
+
+    // T=5200ms: Overlay background fades to transparent (300ms)
     schedule(() => {
       const overlay = overlayRef.current
       if (overlay) {
-        overlay.style.transition = `opacity 400ms ${EASE_FADE}`
+        overlay.style.transition = `opacity 300ms ${EASE_FADE}`
         overlay.style.opacity = '0'
       }
-    }, 5000)
+    }, 5200)
 
-    // T=5500ms: Unmount, call onComplete
+    // T=5500ms: onComplete, display: none
     schedule(() => {
       if (completedRef.current) return
       completedRef.current = true
@@ -400,6 +425,53 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   // ─────────────────────────────────────────────
 
   const baseFontSize = 'clamp(24px, 3.5vw, 44px)'
+
+  const row1Words = PHASE1_WORDS.filter((w) => w.row === 1)
+  const row2Words = PHASE1_WORDS.filter((w) => w.row === 2)
+
+  const renderWord = (
+    word: (typeof PHASE1_WORDS)[number],
+    globalIndex: number,
+  ) => {
+    const isLevel = word.isLevel
+
+    const wordStyle: React.CSSProperties = {
+      display: 'inline-block',
+      fontFamily: isLevel ? 'var(--font-accent)' : 'var(--font-display)',
+      fontWeight: isLevel ? 400 : 700,
+      fontSize: isLevel ? '130%' : undefined,
+      position: isLevel ? 'relative' : undefined,
+      opacity: 0,
+      willChange: 'transform, opacity',
+    }
+
+    return (
+      <span
+        key={`word-${globalIndex}`}
+        ref={(el) => {
+          wordRefs.current[globalIndex] = el
+        }}
+        style={wordStyle}
+      >
+        {word.text}
+        {isLevel && (
+          <span
+            ref={levelUnderlineRef}
+            style={{
+              position: 'absolute',
+              bottom: '2px',
+              left: 0,
+              right: 0,
+              height: '3px',
+              borderRadius: '2px',
+              background: `linear-gradient(90deg, ${COLORS.skyBlue}, ${COLORS.oceanBlue}, ${COLORS.deepTeal})`,
+              willChange: 'transform',
+            }}
+          />
+        )}
+      </span>
+    )
+  }
 
   return (
     <div
@@ -432,7 +504,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
           willChange: 'opacity, transform',
         }}
       >
-        {/* Center text block */}
+        {/* Word container - 2 rows */}
         <div
           style={{
             textAlign: 'center',
@@ -442,56 +514,37 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
             color: COLORS.textDark,
           }}
         >
-          {/* Line 1: "We" */}
+          {/* Row 1: "We scale Ecom Brands" */}
           <div
-            ref={line1Ref}
             style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              willChange: 'transform, opacity',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'baseline',
+              gap: '0.25em',
+              flexWrap: 'wrap',
             }}
           >
-            We
+            {row1Words.map((word) => {
+              const globalIndex = PHASE1_WORDS.indexOf(word)
+              return renderWord(word, globalIndex)
+            })}
           </div>
 
-          {/* Line 2: "scale" with underline */}
+          {/* Row 2: "aufs nächste Level" */}
           <div
-            ref={line2Ref}
             style={{
-              fontFamily: 'var(--font-accent)',
-              fontWeight: 400,
-              fontSize: '115%',
-              position: 'relative',
-              display: 'inline-block',
-              willChange: 'transform, opacity',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'baseline',
+              gap: '0.25em',
+              flexWrap: 'wrap',
+              marginTop: '0.1em',
             }}
           >
-            scale
-            <span
-              ref={underlineRef}
-              style={{
-                position: 'absolute',
-                bottom: '0px',
-                left: 0,
-                right: 0,
-                height: '3px',
-                borderRadius: '2px',
-                background: `linear-gradient(90deg, ${COLORS.skyBlue}, ${COLORS.oceanBlue}, ${COLORS.deepTeal})`,
-                willChange: 'transform',
-              }}
-            />
-          </div>
-
-          {/* Line 3: "eCom brands to the next level" */}
-          <div
-            ref={line3Ref}
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              willChange: 'transform, opacity',
-            }}
-          >
-            eCom brands to the next level
+            {row2Words.map((word) => {
+              const globalIndex = PHASE1_WORDS.indexOf(word)
+              return renderWord(word, globalIndex)
+            })}
           </div>
         </div>
 
@@ -544,7 +597,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
         </div>
       </div>
 
-      {/* ═══════ PHASE 2 & 3: Logo Entrance + Transition ═══════ */}
+      {/* ═══════ PHASE 2 & 3: Logo Entrance + Blur Dissolve ═══════ */}
       <div
         ref={phase2Ref}
         style={{
@@ -574,7 +627,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
               backgroundColor: COLORS.skyBlue,
               borderRadius: '999px',
               transformOrigin: 'center bottom',
-              willChange: 'transform, opacity',
+              willChange: 'transform, opacity, filter',
             }}
           />
           {/* Bar 2 - Ocean Blue, tallest */}
@@ -586,7 +639,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
               backgroundColor: COLORS.oceanBlue,
               borderRadius: '999px',
               transformOrigin: 'center bottom',
-              willChange: 'transform, opacity',
+              willChange: 'transform, opacity, filter',
             }}
           />
           {/* Bar 3 - Deep Teal */}
@@ -598,7 +651,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
               backgroundColor: COLORS.deepTeal,
               borderRadius: '999px',
               transformOrigin: 'center bottom',
-              willChange: 'transform, opacity',
+              willChange: 'transform, opacity, filter',
             }}
           />
         </div>
@@ -649,6 +702,21 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
         >
           MEDIA
         </div>
+
+        {/* Radial pulse div (for outro) */}
+        <div
+          ref={radialPulseRef}
+          style={{
+            position: 'absolute',
+            width: '300px',
+            height: '300px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle, rgba(46,154,196,0.15), transparent 70%)`,
+            pointerEvents: 'none',
+            opacity: 0,
+            willChange: 'transform, opacity',
+          }}
+        />
       </div>
     </div>
   )

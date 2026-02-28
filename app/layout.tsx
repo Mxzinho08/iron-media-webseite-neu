@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
-import { Great_Vibes } from 'next/font/google'
+import { Allura } from 'next/font/google'
 import './globals.css'
 
-const greatVibes = Great_Vibes({
+const allura = Allura({
   subsets: ['latin'],
   variable: '--font-accent',
   display: 'swap',
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={`${GeistSans.variable} ${GeistMono.variable} ${greatVibes.variable}`}>
+    <html lang="de" className={`${GeistSans.variable} ${GeistMono.variable} ${allura.variable}`}>
       <body className="bg-white text-text-dark antialiased overflow-x-hidden">
         {children}
       </body>

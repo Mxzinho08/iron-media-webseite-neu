@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useEffect, useRef, useCallback, useState } from 'react'
-import { INTRO_BRANDS } from '@/lib/constants'
+import React, { useEffect, useRef, useCallback } from 'react'
+import { INTRO_LOGOS } from '@/lib/constants'
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -21,41 +21,42 @@ const COLORS = {
   deepTeal: '#1B7EA6',
   background: '#FFFFFF',
   textDark: '#1A1A2E',
-  textMuted: '#666666',
+  textMuted: '#94A3B8',
 } as const
 
-const EASE_WORD = 'cubic-bezier(0.16, 1, 0.3, 1)'
-const EASE_OVERSHOOT = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
-const EASE_OUT_EXPO = 'cubic-bezier(0.22, 1, 0.36, 1)'
-const EASE_TEXT = 'cubic-bezier(0.16, 1, 0.3, 1)'
-const EASE_MEDIA = 'cubic-bezier(0.25, 1, 0.5, 1)'
+const EASE_BOUNCY = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
 const EASE_FADE = 'cubic-bezier(0.4, 0, 0.2, 1)'
+const EASE_OUT_EXPO = 'cubic-bezier(0.22, 1, 0.36, 1)'
+const EASE_MEDIA = 'cubic-bezier(0.25, 1, 0.5, 1)'
 
 const IRON_LETTERS = ['I', 'R', 'O', 'N']
 
-const UPPER_WORDS = ['We', 'scale', 'eCom', 'brands']
-const LOWER_WORDS = ['to', 'the', 'next', 'level']
-
-/**
- * Compute positions for N items distributed evenly around an oval.
- * Returns array of { x, y } as percentage offsets from center.
- */
-function getOvalPositions(
-  count: number,
-  radiusX: number,
-  radiusY: number,
-): { x: number; y: number }[] {
-  const positions: { x: number; y: number }[] = []
-  for (let i = 0; i < count; i++) {
-    // Start from top (-PI/2) and go clockwise
-    const angle = -Math.PI / 2 + (2 * Math.PI * i) / count
-    positions.push({
-      x: Math.cos(angle) * radiusX,
-      y: Math.sin(angle) * radiusY,
-    })
-  }
-  return positions
+const KEYFRAMES_CSS = `
+@keyframes bounceIn {
+  0%   { opacity: 0; transform: translateY(-30px) scale(0.97); }
+  60%  { opacity: 1; transform: translateY(4px) scale(1.01); }
+  80%  { transform: translateY(-2px) scale(0.995); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
+@keyframes bounceInSmall {
+  0%   { opacity: 0; transform: translateY(-25px) scale(0.97); }
+  60%  { opacity: 1; transform: translateY(3px) scale(1.01); }
+  80%  { transform: translateY(-1.5px) scale(0.995); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes bounceInChar {
+  0%   { opacity: 0; transform: translateY(-15px) scale(0.97); }
+  60%  { opacity: 1; transform: translateY(2px) scale(1.01); }
+  80%  { transform: translateY(-1px) scale(0.995); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes logoBounceIn {
+  0%   { opacity: 0; transform: scale(0.4) translateY(10px); }
+  60%  { opacity: 0.65; transform: scale(1.06) translateY(-1px); }
+  80%  { transform: scale(0.97) translateY(0.5px); }
+  100% { opacity: 0.65; transform: scale(1) translateY(0); }
+}
+`
 
 // ─────────────────────────────────────────────
 // COMPONENT
@@ -68,10 +69,12 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
 
   // Phase 1 refs
   const phase1Ref = useRef<HTMLDivElement>(null)
-  const upperWordRefs = useRef<(HTMLSpanElement | null)[]>([])
-  const lowerWordRefs = useRef<(HTMLSpanElement | null)[]>([])
+  const line1Ref = useRef<HTMLDivElement>(null)
+  const line2Ref = useRef<HTMLDivElement>(null)
+  const line3Ref = useRef<HTMLDivElement>(null)
   const underlineRef = useRef<HTMLSpanElement>(null)
-  const brandLogoRefs = useRef<(HTMLDivElement | null)[]>([])
+  const trustedByRef = useRef<HTMLDivElement>(null)
+  const logoRefs = useRef<(HTMLImageElement | null)[]>([])
 
   // Phase 2 refs
   const phase2Ref = useRef<HTMLDivElement>(null)
@@ -81,9 +84,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   const barsGroupRef = useRef<HTMLDivElement>(null)
   const ironLetterRefs = useRef<(HTMLSpanElement | null)[]>([])
   const mediaRef = useRef<HTMLDivElement>(null)
-
-  // Phase tracking
-  const [phase, setPhase] = useState<1 | 2 | 3>(1)
+  const ironContainerRef = useRef<HTMLDivElement>(null)
 
   const schedule = useCallback((fn: () => void, delay: number) => {
     const id = setTimeout(fn, delay)
@@ -106,10 +107,11 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     overlay.style.transition = `opacity 200ms ${EASE_FADE}`
     overlay.style.opacity = '0'
 
-    setTimeout(() => {
+    const id = setTimeout(() => {
       overlay.style.display = 'none'
       onComplete()
     }, 210)
+    timersRef.current.push(id)
   }, [onComplete])
 
   // Skip on click or keypress
@@ -123,284 +125,257 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     }
   }, [finish])
 
-  // ── PHASE 1: Statement + Brand Logos ──
+  // Main animation sequence
   useEffect(() => {
     const phase1 = phase1Ref.current
-    if (!phase1 || phase !== 1) return
-
-    // Initial states for upper words
-    upperWordRefs.current.forEach((el) => {
-      if (!el) return
-      el.style.opacity = '0'
-      el.style.transform = 'translateY(20px)'
-      el.style.filter = 'blur(3px)'
-    })
-
-    // Initial states for lower words
-    lowerWordRefs.current.forEach((el) => {
-      if (!el) return
-      el.style.opacity = '0'
-      el.style.transform = 'translateY(20px)'
-      el.style.filter = 'blur(3px)'
-    })
-
-    // Underline initial
+    const phase2 = phase2Ref.current
+    const line1 = line1Ref.current
+    const line2 = line2Ref.current
+    const line3 = line3Ref.current
     const underline = underlineRef.current
-    if (underline) {
-      underline.style.width = '0%'
-    }
-
-    // Brand logos initial
-    brandLogoRefs.current.forEach((el) => {
-      if (!el) return
-      el.style.opacity = '0'
-      el.style.transform = 'scale(0.3)'
-    })
-
-    // ── T=300ms: Upper line words stagger in ──
-    UPPER_WORDS.forEach((_, i) => {
-      schedule(() => {
-        const el = upperWordRefs.current[i]
-        if (!el) return
-        el.style.transition = `opacity 400ms ${EASE_WORD}, transform 400ms ${EASE_WORD}, filter 400ms ${EASE_WORD}`
-        el.style.opacity = '1'
-        el.style.transform = 'translateY(0)'
-        el.style.filter = 'blur(0px)'
-      }, 300 + i * 80)
-    })
-
-    // ── T=700ms: Underline draws on "scale" ──
-    schedule(() => {
-      if (underline) {
-        underline.style.transition = `width 350ms ${EASE_WORD}`
-        underline.style.width = '100%'
-      }
-    }, 700)
-
-    // ── T=800ms: Lower line words stagger in ──
-    LOWER_WORDS.forEach((_, i) => {
-      schedule(() => {
-        const el = lowerWordRefs.current[i]
-        if (!el) return
-        el.style.transition = `opacity 400ms ${EASE_WORD}, transform 400ms ${EASE_WORD}, filter 400ms ${EASE_WORD}`
-        el.style.opacity = '1'
-        el.style.transform = 'translateY(0)'
-        el.style.filter = 'blur(0px)'
-
-        // "level" gets scale bounce
-        if (i === LOWER_WORDS.length - 1) {
-          el.style.transform = 'translateY(0) scale(0.9)'
-          schedule(() => {
-            el.style.transition = `transform 150ms ${EASE_OVERSHOOT}`
-            el.style.transform = 'translateY(0) scale(1.05)'
-          }, 800 + i * 70 + 400)
-          schedule(() => {
-            el.style.transition = `transform 120ms ease-out`
-            el.style.transform = 'translateY(0) scale(1.0)'
-          }, 800 + i * 70 + 550)
-        }
-      }, 800 + i * 70)
-    })
-
-    // ── T=1200ms: Brand logos appear in oval ──
-    INTRO_BRANDS.forEach((_, i) => {
-      schedule(() => {
-        const el = brandLogoRefs.current[i]
-        if (!el) return
-        // Spring-like multi-step bounce: 0.3 → 1.15 → 0.95 → 1.02 → 1.0
-        el.style.transition = `opacity 200ms ${EASE_OVERSHOOT}, transform 300ms ${EASE_OVERSHOOT}`
-        el.style.opacity = '0.7'
-        el.style.transform = 'scale(1.15)'
-
-        schedule(() => {
-          el.style.transition = `transform 120ms ease-in-out`
-          el.style.transform = 'scale(0.95)'
-        }, 1200 + i * 80 + 300)
-
-        schedule(() => {
-          el.style.transition = `transform 100ms ease-out`
-          el.style.transform = 'scale(1.02)'
-        }, 1200 + i * 80 + 420)
-
-        schedule(() => {
-          el.style.transition = `transform 80ms ease-out`
-          el.style.transform = 'scale(1.0)'
-        }, 1200 + i * 80 + 520)
-      }, 1200 + i * 80)
-    })
-
-    // ── T=2800ms: Everything fades out ──
-    schedule(() => {
-      phase1.style.transition = `opacity 300ms ${EASE_FADE}, transform 300ms ${EASE_FADE}`
-      phase1.style.opacity = '0'
-      phase1.style.transform = 'scale(0.96)'
-    }, 2800)
-
-    // ── T=3100ms: Switch to Phase 2 ──
-    schedule(() => {
-      setPhase(2)
-    }, 3100)
-  }, [phase, schedule])
-
-  // ── PHASE 2: Logo Entrance ──
-  useEffect(() => {
-    if (phase !== 2) return
-
+    const trustedBy = trustedByRef.current
     const bar1 = bar1Ref.current
     const bar2 = bar2Ref.current
     const bar3 = bar3Ref.current
     const barsGroup = barsGroupRef.current
     const media = mediaRef.current
-    const phase2 = phase2Ref.current
+    const ironContainer = ironContainerRef.current
 
-    if (!bar1 || !bar2 || !bar3 || !barsGroup || !media || !phase2) return
+    if (
+      !phase1 || !phase2 || !line1 || !line2 || !line3 ||
+      !underline || !trustedBy || !bar1 || !bar2 || !bar3 ||
+      !barsGroup || !media || !ironContainer
+    ) return
 
-    // Initial states
-    phase2.style.opacity = '1'
+    // ═══════════════════════════════════════════
+    // INITIAL STATES
+    // ═══════════════════════════════════════════
 
-    bar2.style.transform = 'translateY(-120vh)'
-    bar2.style.opacity = '1'
-    bar1.style.transform = 'translateX(-60vw) rotate(-8deg)'
+    // Phase 1 elements: hidden
+    line1.style.opacity = '0'
+    line1.style.transform = 'translateY(-30px) scale(0.97)'
+    line2.style.opacity = '0'
+    line2.style.transform = 'translateY(-30px) scale(0.97)'
+    line3.style.opacity = '0'
+    line3.style.transform = 'translateY(-25px) scale(0.97)'
+    underline.style.transform = 'scaleX(0)'
+    underline.style.transformOrigin = 'left center'
+    trustedBy.style.opacity = '0'
+
+    logoRefs.current.forEach((el) => {
+      if (!el) return
+      el.style.opacity = '0'
+      el.style.transform = 'scale(0.4) translateY(10px)'
+    })
+
+    // Phase 2: hidden
+    phase2.style.opacity = '0'
+    phase2.style.pointerEvents = 'none'
     bar1.style.opacity = '0'
-    bar3.style.transform = 'translateX(60vw) rotate(8deg)'
+    bar2.style.opacity = '0'
     bar3.style.opacity = '0'
+    bar2.style.transform = 'translateY(-100vh)'
+    bar1.style.transform = 'translateX(-50vw) rotate(-12deg)'
+    bar3.style.transform = 'translateX(50vw) rotate(12deg)'
 
     ironLetterRefs.current.forEach((el) => {
       if (!el) return
       el.style.opacity = '0'
-      el.style.transform = 'translateY(12px)'
+      el.style.transform = 'translateY(-15px) scale(0.97)'
+    })
+    media.style.opacity = '0'
+    media.style.letterSpacing = '0.8em'
+    ironContainer.style.opacity = '1'
+
+    // ═══════════════════════════════════════════
+    // PHASE 1: Statement + Trusted By (T=0 -> T=3200ms)
+    // ═══════════════════════════════════════════
+
+    // T=400ms: "We" bounces in
+    schedule(() => {
+      line1.style.animation = 'bounceIn 600ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
+    }, 400)
+
+    // T=550ms: "scale" bounces in (slightly slower)
+    schedule(() => {
+      line2.style.animation = 'bounceIn 700ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
+    }, 550)
+
+    // T=700ms: "eCom brands to the next level" bounces in
+    schedule(() => {
+      line3.style.animation = 'bounceInSmall 600ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
+    }, 700)
+
+    // T=850ms: Underline on "scale" draws from left
+    schedule(() => {
+      underline.style.transition = `transform 400ms ${EASE_BOUNCY}`
+      underline.style.transform = 'scaleX(1)'
+    }, 850)
+
+    // T=1300ms: "TRUSTED BY LEADING BRANDS" fades in (NOT bounce)
+    schedule(() => {
+      trustedBy.style.transition = 'opacity 400ms ease-out'
+      trustedBy.style.opacity = '0.5'
+    }, 1300)
+
+    // T=1500ms: Brand logos bounce in with stagger
+    INTRO_LOGOS.forEach((_, i) => {
+      schedule(() => {
+        const el = logoRefs.current[i]
+        if (!el) return
+        el.style.animation = `logoBounceIn 450ms ${EASE_BOUNCY} forwards`
+      }, 1500 + i * 80)
     })
 
-    media.style.opacity = '0'
-    media.style.letterSpacing = '1em'
-
-    // Offset: Phase 2 starts at T=3000ms globally, but this effect fires at
-    // phase switch (~3100ms). We use relative timing from here = 0ms base.
-    // Bar 2 drops: relative T=0ms (global ~3100ms)
+    // T=2900ms: Everything fades out
     schedule(() => {
-      bar2.style.transition = `transform 380ms ${EASE_OVERSHOOT}`
+      phase1.style.transition = `opacity 300ms ${EASE_FADE}, transform 300ms ${EASE_FADE}`
+      phase1.style.opacity = '0'
+      phase1.style.transform = 'scale(0.98)'
+    }, 2900)
+
+    // ═══════════════════════════════════════════
+    // PHASE 2: Logo Entrance (T=3200ms -> T=4700ms)
+    // ═══════════════════════════════════════════
+
+    // T=3200ms: Show phase 2 container
+    schedule(() => {
+      phase2.style.opacity = '1'
+      phase2.style.pointerEvents = 'auto'
+    }, 3200)
+
+    // T=3400ms: Bar 2 (center, tallest) FALLS from top
+    schedule(() => {
+      bar2.style.opacity = '1'
+      bar2.style.transition = `transform 400ms ${EASE_BOUNCY}`
       bar2.style.transform = 'translateY(0)'
-    }, 0)
+    }, 3400)
 
-    // Bar 2 squash & stretch on land
+    // Bar 2 squash & stretch on landing (T=3400 + 400 = T=3800)
     schedule(() => {
-      bar2.style.transition = `transform 80ms ease-out`
-      bar2.style.transform = 'scaleX(1.3) scaleY(0.72)'
-    }, 380)
+      bar2.style.transition = 'transform 120ms ease-out'
+      bar2.style.transform = 'scaleY(0.65) scaleX(1.35)'
+    }, 3800)
     schedule(() => {
-      bar2.style.transition = `transform 80ms ease-in-out`
-      bar2.style.transform = 'scaleX(0.92) scaleY(1.12)'
-    }, 460)
+      bar2.style.transition = 'transform 100ms ease-in-out'
+      bar2.style.transform = 'scaleY(1.18) scaleX(0.88)'
+    }, 3920)
     schedule(() => {
-      bar2.style.transition = `transform 70ms ease-in-out`
-      bar2.style.transform = 'scaleX(1.04) scaleY(0.97)'
-    }, 540)
+      bar2.style.transition = 'transform 80ms ease-in-out'
+      bar2.style.transform = 'scaleY(0.94) scaleX(1.04)'
+    }, 4020)
     schedule(() => {
-      bar2.style.transition = `transform 60ms ease-out`
-      bar2.style.transform = 'scaleX(1) scaleY(1)'
-    }, 610)
+      bar2.style.transition = 'transform 80ms ease-in-out'
+      bar2.style.transform = 'scaleY(1.03) scaleX(0.98)'
+    }, 4100)
+    schedule(() => {
+      bar2.style.transition = 'transform 80ms ease-out'
+      bar2.style.transform = 'scaleY(1) scaleX(1)'
+    }, 4180)
 
-    // Bar 1 flies from left: relative T=250ms (global ~3350ms)
+    // T=3650ms: Bar 1 flies from LEFT
     schedule(() => {
-      bar1.style.transition = `transform 350ms ${EASE_OUT_EXPO}, opacity 200ms ${EASE_OUT_EXPO}`
-      bar1.style.transform = 'translateX(0) rotate(0deg)'
       bar1.style.opacity = '1'
-    }, 250)
+      bar1.style.transition = `transform 380ms ${EASE_BOUNCY}, opacity 150ms ease-out`
+      bar1.style.transform = 'translateX(0) rotate(0deg)'
+    }, 3650)
 
-    // Bar 1 settle
+    // Bar 1 settle (T=3650 + 380 = T=4030)
     schedule(() => {
-      bar1.style.transition = `transform 70ms ease-out`
-      bar1.style.transform = 'scaleX(1.1)'
-    }, 600)
+      bar1.style.transition = 'transform 80ms ease-out'
+      bar1.style.transform = 'scaleX(1.08)'
+    }, 4030)
     schedule(() => {
-      bar1.style.transition = `transform 65ms ease-in-out`
-      bar1.style.transform = 'scaleX(0.96)'
-    }, 670)
+      bar1.style.transition = 'transform 70ms ease-in-out'
+      bar1.style.transform = 'scaleX(0.97)'
+    }, 4110)
     schedule(() => {
-      bar1.style.transition = `transform 60ms ease-out`
+      bar1.style.transition = 'transform 60ms ease-out'
       bar1.style.transform = 'scaleX(1.0)'
-    }, 730)
+    }, 4180)
 
-    // Bar 3 flies from right: relative T=450ms (global ~3550ms)
+    // T=3850ms: Bar 3 flies from RIGHT
     schedule(() => {
-      bar3.style.transition = `transform 350ms ${EASE_OUT_EXPO}, opacity 200ms ${EASE_OUT_EXPO}`
-      bar3.style.transform = 'translateX(0) rotate(0deg)'
       bar3.style.opacity = '1'
-    }, 450)
+      bar3.style.transition = `transform 380ms ${EASE_BOUNCY}, opacity 150ms ease-out`
+      bar3.style.transform = 'translateX(0) rotate(0deg)'
+    }, 3850)
 
-    // Bar 3 settle
+    // Bar 3 settle (T=3850 + 380 = T=4230)
     schedule(() => {
-      bar3.style.transition = `transform 70ms ease-out`
-      bar3.style.transform = 'scaleX(1.1)'
-    }, 800)
+      bar3.style.transition = 'transform 80ms ease-out'
+      bar3.style.transform = 'scaleX(1.08)'
+    }, 4230)
     schedule(() => {
-      bar3.style.transition = `transform 65ms ease-in-out`
-      bar3.style.transform = 'scaleX(0.96)'
-    }, 870)
+      bar3.style.transition = 'transform 70ms ease-in-out'
+      bar3.style.transform = 'scaleX(0.97)'
+    }, 4310)
     schedule(() => {
-      bar3.style.transition = `transform 60ms ease-out`
+      bar3.style.transition = 'transform 60ms ease-out'
       bar3.style.transform = 'scaleX(1.0)'
-    }, 930)
+    }, 4380)
 
-    // Sync pulse all bars: relative T=700ms (global ~3800ms)
+    // T=4100ms: Sync pulse on all bars
     schedule(() => {
       ;[bar1, bar2, bar3].forEach((bar) => {
-        bar.style.transition = `transform 100ms ease-in-out, box-shadow 100ms ease-in-out`
-        bar.style.transform = 'scale(1.04)'
-        bar.style.boxShadow = `0 0 30px ${COLORS.oceanBlue}`
+        bar.style.transition = 'transform 125ms ease-in-out, box-shadow 125ms ease-in-out'
+        bar.style.transform = 'scale(1.035)'
+        bar.style.boxShadow = `0 0 24px ${COLORS.oceanBlue}40`
       })
-    }, 700)
+    }, 4100)
     schedule(() => {
       ;[bar1, bar2, bar3].forEach((bar) => {
-        bar.style.transition = `transform 100ms ease-out, box-shadow 200ms ease-out`
+        bar.style.transition = 'transform 125ms ease-out, box-shadow 200ms ease-out'
         bar.style.transform = 'scale(1.0)'
         bar.style.boxShadow = '0 0 0px transparent'
       })
-    }, 800)
+    }, 4225)
 
-    // "IRON" text: relative T=800ms (global ~3900ms)
+    // T=4200ms: "IRON" character stagger (bounceIn)
     IRON_LETTERS.forEach((_, i) => {
       schedule(() => {
         const el = ironLetterRefs.current[i]
         if (!el) return
-        el.style.transition = `opacity 300ms ${EASE_TEXT}, transform 300ms ${EASE_TEXT}`
-        el.style.opacity = '1'
-        el.style.transform = 'translateY(0)'
-      }, 800 + i * 60)
+        el.style.animation = `bounceInChar 350ms ${EASE_BOUNCY} forwards`
+      }, 4200 + i * 50)
     })
 
-    // "MEDIA" text: relative T=1000ms (global ~4100ms)
+    // T=4400ms: "MEDIA" tracking animation
     schedule(() => {
       media.style.transition = `letter-spacing 400ms ${EASE_MEDIA}, opacity 400ms ${EASE_MEDIA}`
       media.style.opacity = '1'
       media.style.letterSpacing = '0.35em'
-    }, 1000)
+    }, 4400)
 
-    // ── PHASE 3: Transition to Hero ──
-    // relative T=1600ms (global ~4700ms): Text fades, bars scale out
+    // ═══════════════════════════════════════════
+    // PHASE 3: Transition to Hero (T=4700ms -> T=5500ms)
+    // ═══════════════════════════════════════════
+
+    // T=4700ms: "IRON" and "MEDIA" text fade out
     schedule(() => {
-      // Fade out IRON and MEDIA text
-      ironLetterRefs.current.forEach((el) => {
-        if (!el) return
-        el.style.transition = `opacity 200ms ${EASE_FADE}`
-        el.style.opacity = '0'
-      })
+      ironContainer.style.transition = `opacity 200ms ${EASE_FADE}`
+      ironContainer.style.opacity = '0'
       media.style.transition = `opacity 200ms ${EASE_FADE}`
       media.style.opacity = '0'
+    }, 4700)
 
-      // Bars move right and scale up
-      barsGroup.style.transition = `transform 400ms ${EASE_OUT_EXPO}`
-      barsGroup.style.transform = 'translateX(25vw) scale(10)'
+    // T=4800ms: Bars move right, scale up, become semi-transparent
+    schedule(() => {
+      barsGroup.style.transition = `transform 500ms ${EASE_OUT_EXPO}, opacity 500ms ${EASE_OUT_EXPO}`
+      barsGroup.style.transform = 'translateX(20vw) scale(11)'
+      barsGroup.style.opacity = '0.3'
+    }, 4800)
 
-      // Overlay fades
+    // T=5000ms: Overlay background fades out
+    schedule(() => {
       const overlay = overlayRef.current
       if (overlay) {
         overlay.style.transition = `opacity 400ms ${EASE_FADE}`
         overlay.style.opacity = '0'
       }
-    }, 1600)
+    }, 5000)
 
-    // relative T=2200ms (global ~5300ms): Complete
+    // T=5500ms: Unmount, call onComplete
     schedule(() => {
       if (completedRef.current) return
       completedRef.current = true
@@ -409,8 +384,8 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
         overlay.style.display = 'none'
       }
       onComplete()
-    }, 2200)
-  }, [phase, schedule, onComplete])
+    }, 5500)
+  }, [schedule, onComplete, finish])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -420,8 +395,11 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     }
   }, [])
 
-  // Compute oval positions for brand logos
-  const brandPositions = getOvalPositions(INTRO_BRANDS.length, 38, 42)
+  // ─────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────
+
+  const baseFontSize = 'clamp(24px, 3.5vw, 44px)'
 
   return (
     <div
@@ -438,273 +416,240 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
         overflow: 'hidden',
       }}
     >
-      {/* ═══════ PHASE 1: Statement + Brand Logos ═══════ */}
-      {phase === 1 && (
+      {/* Global keyframes */}
+      <style>{KEYFRAMES_CSS}</style>
+
+      {/* ═══════ PHASE 1: Statement + Trusted By ═══════ */}
+      <div
+        ref={phase1Ref}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          willChange: 'opacity, transform',
+        }}
+      >
+        {/* Center text block */}
         <div
-          ref={phase1Ref}
           style={{
-            position: 'absolute',
-            inset: 0,
+            textAlign: 'center',
+            fontSize: baseFontSize,
+            lineHeight: 1.3,
+            letterSpacing: '-0.02em',
+            color: COLORS.textDark,
+          }}
+        >
+          {/* Line 1: "We" */}
+          <div
+            ref={line1Ref}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              willChange: 'transform, opacity',
+            }}
+          >
+            We
+          </div>
+
+          {/* Line 2: "scale" with underline */}
+          <div
+            ref={line2Ref}
+            style={{
+              fontFamily: 'var(--font-accent)',
+              fontWeight: 400,
+              fontSize: '115%',
+              position: 'relative',
+              display: 'inline-block',
+              willChange: 'transform, opacity',
+            }}
+          >
+            scale
+            <span
+              ref={underlineRef}
+              style={{
+                position: 'absolute',
+                bottom: '0px',
+                left: 0,
+                right: 0,
+                height: '3px',
+                borderRadius: '2px',
+                background: `linear-gradient(90deg, ${COLORS.skyBlue}, ${COLORS.oceanBlue}, ${COLORS.deepTeal})`,
+                willChange: 'transform',
+              }}
+            />
+          </div>
+
+          {/* Line 3: "eCom brands to the next level" */}
+          <div
+            ref={line3Ref}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              willChange: 'transform, opacity',
+            }}
+          >
+            eCom brands to the next level
+          </div>
+        </div>
+
+        {/* TRUSTED BY LEADING BRANDS */}
+        <div
+          ref={trustedByRef}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 500,
+            fontSize: '10px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.2em',
+            color: COLORS.textMuted,
+            marginTop: '32px',
+            willChange: 'opacity',
+          }}
+        >
+          TRUSTED BY LEADING BRANDS
+        </div>
+
+        {/* Brand logos row */}
+        <div
+          style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            willChange: 'opacity, transform',
+            gap: 'clamp(20px, 3vw, 40px)',
+            marginTop: '16px',
+            flexWrap: 'wrap',
           }}
         >
-          {/* Center text block */}
-          <div
-            style={{
-              textAlign: 'center',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 600,
-              fontSize: 'clamp(28px, 4vw, 48px)',
-              color: COLORS.textDark,
-              lineHeight: 1.4,
-              position: 'relative',
-              zIndex: 2,
-            }}
-          >
-            {/* Upper line: "We scale eCom brands" */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: '0.3em',
-                flexWrap: 'wrap',
+          {INTRO_LOGOS.map((logo, i) => (
+            <img
+              key={logo.domain}
+              ref={(el) => {
+                logoRefs.current[i] = el
               }}
-            >
-              {UPPER_WORDS.map((word, i) => (
-                <span
-                  key={`upper-${i}`}
-                  ref={(el) => {
-                    upperWordRefs.current[i] = el
-                  }}
-                  style={{
-                    display: 'inline-block',
-                    willChange: 'transform, opacity, filter',
-                    position: 'relative',
-                  }}
-                >
-                  {word}
-                  {/* Gradient underline on "scale" */}
-                  {word === 'scale' && (
-                    <span
-                      ref={underlineRef}
-                      style={{
-                        position: 'absolute',
-                        bottom: '-2px',
-                        left: 0,
-                        height: '3px',
-                        width: '0%',
-                        borderRadius: '2px',
-                        background: `linear-gradient(90deg, ${COLORS.skyBlue}, ${COLORS.oceanBlue}, ${COLORS.deepTeal})`,
-                        willChange: 'width',
-                      }}
-                    />
-                  )}
-                </span>
-              ))}
-            </div>
-
-            {/* Divider line */}
-            <div
+              src={`https://logo.clearbit.com/${logo.domain}`}
+              alt={logo.name}
               style={{
-                width: '60px',
-                height: '2px',
-                background: `linear-gradient(90deg, ${COLORS.skyBlue}, ${COLORS.deepTeal})`,
-                margin: '12px auto',
-                borderRadius: '1px',
-                opacity: 0.5,
+                height: '22px',
+                width: 'auto',
+                opacity: 0,
+                willChange: 'transform, opacity',
+                pointerEvents: 'none',
+                userSelect: 'none',
               }}
             />
-
-            {/* Lower line: "to the next level" */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: '0.3em',
-                flexWrap: 'wrap',
-              }}
-            >
-              {LOWER_WORDS.map((word, i) => (
-                <span
-                  key={`lower-${i}`}
-                  ref={(el) => {
-                    lowerWordRefs.current[i] = el
-                  }}
-                  style={{
-                    display: 'inline-block',
-                    willChange: 'transform, opacity, filter',
-                  }}
-                >
-                  {word}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Brand logos in oval arrangement */}
-          {INTRO_BRANDS.map((brand, i) => {
-            const pos = brandPositions[i]
-            return (
-              <div
-                key={brand.name}
-                ref={(el) => {
-                  brandLogoRefs.current[i] = el
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'scale(0.3)',
-                  marginLeft: `${pos.x}vw`,
-                  marginTop: `${pos.y}vh`,
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 800,
-                  fontSize: 'clamp(16px, 2vw, 22px)',
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: brand.color,
-                  opacity: 0,
-                  whiteSpace: 'nowrap',
-                  willChange: 'transform, opacity',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                }}
-              >
-                {brand.name}
-              </div>
-            )
-          })}
+          ))}
         </div>
-      )}
+      </div>
 
       {/* ═══════ PHASE 2 & 3: Logo Entrance + Transition ═══════ */}
-      {phase >= 2 && (
+      <div
+        ref={phase2Ref}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px',
+          willChange: 'opacity, transform',
+        }}
+      >
+        {/* Bars container */}
         <div
-          ref={phase2Ref}
+          ref={barsGroupRef}
           style={{
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: '16px',
-            willChange: 'opacity, transform',
+            gap: '10px',
+            willChange: 'transform, opacity',
           }}
         >
-          {/* Bars container */}
+          {/* Bar 1 - Sky Blue */}
           <div
-            ref={barsGroupRef}
+            ref={bar1Ref}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              willChange: 'transform',
+              width: '22px',
+              height: '120px',
+              backgroundColor: COLORS.skyBlue,
+              borderRadius: '999px',
+              transformOrigin: 'center bottom',
+              willChange: 'transform, opacity',
             }}
-          >
-            {/* Bar 1 - Sky Blue */}
-            <div
-              ref={bar1Ref}
-              className="intro-bar"
-              style={{
-                width: '24px',
-                height: '132px',
-                backgroundColor: COLORS.skyBlue,
-                borderRadius: '999px',
-                willChange: 'transform, opacity',
-              }}
-            />
-            {/* Bar 2 - Ocean Blue, tallest */}
-            <div
-              ref={bar2Ref}
-              className="intro-bar"
-              style={{
-                width: '24px',
-                height: '180px',
-                backgroundColor: COLORS.oceanBlue,
-                borderRadius: '999px',
-                willChange: 'transform, opacity',
-              }}
-            />
-            {/* Bar 3 - Deep Teal */}
-            <div
-              ref={bar3Ref}
-              className="intro-bar"
-              style={{
-                width: '24px',
-                height: '144px',
-                backgroundColor: COLORS.deepTeal,
-                borderRadius: '999px',
-                willChange: 'transform, opacity',
-              }}
-            />
-          </div>
-
-          {/* IRON text */}
+          />
+          {/* Bar 2 - Ocean Blue, tallest */}
           <div
+            ref={bar2Ref}
             style={{
-              display: 'flex',
-              gap: '0.08em',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              color: COLORS.textDark,
-              letterSpacing: '0.08em',
-              fontSize: 'clamp(24px, 4vw, 48px)',
-              lineHeight: 1,
+              width: '22px',
+              height: '164px',
+              backgroundColor: COLORS.oceanBlue,
+              borderRadius: '999px',
+              transformOrigin: 'center bottom',
+              willChange: 'transform, opacity',
             }}
-          >
-            {IRON_LETTERS.map((letter, i) => (
-              <span
-                key={`iron-${i}`}
-                ref={(el) => {
-                  ironLetterRefs.current[i] = el
-                }}
-                style={{
-                  display: 'inline-block',
-                  willChange: 'transform, opacity',
-                }}
-              >
-                {letter}
-              </span>
-            ))}
-          </div>
-
-          {/* MEDIA text */}
+          />
+          {/* Bar 3 - Deep Teal */}
           <div
-            ref={mediaRef}
+            ref={bar3Ref}
             style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 300,
-              color: COLORS.textMuted,
-              fontSize: 'clamp(10px, 1.5vw, 16px)',
-              textTransform: 'uppercase',
-              lineHeight: 1,
-              willChange: 'opacity, letter-spacing',
-              marginTop: '-8px',
+              width: '22px',
+              height: '132px',
+              backgroundColor: COLORS.deepTeal,
+              borderRadius: '999px',
+              transformOrigin: 'center bottom',
+              willChange: 'transform, opacity',
             }}
-          >
-            MEDIA
-          </div>
+          />
         </div>
-      )}
 
-      {/* Mobile responsive bar sizing via inline style tag */}
-      <style>{`
-        @media (max-width: 767px) {
-          .intro-bar {
-            width: 18px !important;
-          }
-          .intro-bar:nth-child(1) {
-            height: 100px !important;
-          }
-          .intro-bar:nth-child(2) {
-            height: 136px !important;
-          }
-          .intro-bar:nth-child(3) {
-            height: 109px !important;
-          }
-        }
-      `}</style>
+        {/* IRON text */}
+        <div
+          ref={ironContainerRef}
+          style={{
+            display: 'flex',
+            gap: '0.06em',
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            color: COLORS.textDark,
+            fontSize: 'clamp(24px, 4vw, 48px)',
+            lineHeight: 1,
+            willChange: 'opacity',
+          }}
+        >
+          {IRON_LETTERS.map((letter, i) => (
+            <span
+              key={`iron-${i}`}
+              ref={(el) => {
+                ironLetterRefs.current[i] = el
+              }}
+              style={{
+                display: 'inline-block',
+                willChange: 'transform, opacity',
+              }}
+            >
+              {letter}
+            </span>
+          ))}
+        </div>
+
+        {/* MEDIA text */}
+        <div
+          ref={mediaRef}
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 300,
+            color: COLORS.textMuted,
+            fontSize: 'clamp(13px, 2.2vw, 26px)',
+            textTransform: 'uppercase',
+            lineHeight: 1,
+            willChange: 'opacity, letter-spacing',
+            marginTop: '-8px',
+          }}
+        >
+          MEDIA
+        </div>
+      </div>
     </div>
   )
 }

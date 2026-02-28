@@ -75,8 +75,31 @@ export const TRUSTED_BRANDS = [
 ]
 
 export const HERO_METRICS = [
-  { value: '€1B+', label: 'PORTFOLIO REVENUE' },
-  { value: '150+', label: 'BRANDS SKALIERT' },
-  { value: '12x', label: 'Ø ROAS' },
-  { value: '98%', label: 'CLIENT RETENTION' },
+  { value: '€47M+', label: 'MONTHLY AD SPEND MANAGED' },
+  { value: '150+', label: 'BRANDS SCALED' },
+  { value: '3.2x', label: 'AVG. REVENUE GROWTH' },
+  { value: '96%', label: 'CLIENT RETENTION RATE' },
+]
+
+export const INTRO_LOGOS = [
+  { name: 'SNOCKS', domain: 'snocks.com' },
+  { name: 'PURELEI', domain: 'purelei.com' },
+  { name: 'WATERDROP', domain: 'waterdrop.com' },
+  { name: 'YFood', domain: 'yfood.eu' },
+  { name: 'HOLY', domain: 'holy.com' },
+  { name: 'KoRo', domain: 'korodrogerie.de' },
+]
+
+export const TRUSTED_LOGOS = [
+  { name: 'SNOCKS', domain: 'snocks.com' },
+  { name: 'PURELEI', domain: 'purelei.com' },
+  { name: 'WATERDROP', domain: 'waterdrop.com' },
+  { name: 'YFood', domain: 'yfood.eu' },
+  { name: 'HOLY', domain: 'holy.com' },
+  { name: 'KoRo', domain: 'korodrogerie.de' },
+  { name: 'Meta', domain: 'meta.com' },
+  { name: 'Google', domain: 'google.com' },
+  { name: 'TikTok', domain: 'tiktok.com' },
+  { name: 'Shopify', domain: 'shopify.com' },
+  { name: 'Klaviyo', domain: 'klaviyo.com' },
 ]

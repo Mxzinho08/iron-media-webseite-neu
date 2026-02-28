@@ -45,7 +45,8 @@
   /* === TYPOGRAFIE === */
   --font-display: var(--font-geist-sans), system-ui, sans-serif;
   --font-body: var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-mono: var(--font-geist-mono), 'JetBrains Mono', monospace;
+  --font-accent: var(--font-accent), 'Great Vibes', cursive;
 
   /* Font Sizes */
   --text-hero: clamp(52px, 8vw, 108px);

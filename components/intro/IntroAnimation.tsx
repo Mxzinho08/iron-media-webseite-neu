@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useCallback } from 'react'
-import { INTRO_LOGOS } from '@/lib/constants'
+import { INTRO_BRANDS } from '@/lib/constants'
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -224,7 +224,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     }, 1600)
 
     // T=1800ms: Brand logos bounce in with stagger (80ms apart)
-    INTRO_LOGOS.forEach((_, i) => {
+    INTRO_BRANDS.forEach((_, i) => {
       schedule(() => {
         const el = logoRefs.current[i]
         if (!el) return
@@ -576,23 +576,26 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
             flexWrap: 'wrap',
           }}
         >
-          {INTRO_LOGOS.map((logo, i) => (
-            <img
-              key={logo.domain}
+          {INTRO_BRANDS.map((brand, i) => (
+            <span
+              key={brand.name}
               ref={(el) => {
-                logoRefs.current[i] = el
+                logoRefs.current[i] = el as any
               }}
-              src={`https://logo.clearbit.com/${logo.domain}`}
-              alt={logo.name}
               style={{
-                height: '22px',
-                width: 'auto',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: 'clamp(14px, 1.8vw, 20px)',
+                letterSpacing: '0.04em',
+                color: brand.color,
                 opacity: 0,
                 willChange: 'transform, opacity',
                 pointerEvents: 'none',
                 userSelect: 'none',
               }}
-            />
+            >
+              {brand.name}
+            </span>
           ))}
         </div>
       </div>

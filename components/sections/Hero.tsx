@@ -1,61 +1,101 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { HERO_METRICS, TRUSTED_LOGOS } from '@/lib/constants'
+import { TRUSTED_LOGOS } from '@/lib/constants'
 
 /* ============================================
-   IRON MEDIA — HERO v7
-   Scaling Dashboard: Canvas chart + floating
-   notification bubbles + glassmorphism card
+   IRON MEDIA — HERO v5.4
+   Animated bars + Shopify sale notifications
+   + metric bubbles + floating text (no card)
    ============================================ */
 
 const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1]
 
-const NOTIFICATION_BUBBLES = [
-  { text: '+142 Sales', subtext: 'Today', color: '#5CBB5C' },
-  { text: '+€12,847', subtext: 'Revenue today', color: '#2E9AC4' },
-  { text: '↑ 34%', subtext: 'vs. last month', color: '#5CBB5C' },
-  { text: 'New Order', subtext: '€289.00', color: '#2E9AC4' },
-  { text: '+87', subtext: 'New Customers', color: '#56B8DE' },
-  { text: '4.9', subtext: 'Store Rating', color: '#F5A623' },
-  { text: '€1.2M', subtext: 'Monthly Revenue', color: '#5CBB5C' },
-  { text: 'ROAS 4.2x', subtext: 'Meta Ads', color: '#2E9AC4' },
-  { text: '68%', subtext: 'Repeat Rate', color: '#1B7EA6' },
-  { text: 'CPA €12', subtext: '↓ 23% optimiert', color: '#5CBB5C' },
-  { text: '+3 Märkte', subtext: 'Expandiert', color: '#56B8DE' },
-  { text: '€340K', subtext: 'Ad Spend/Mo', color: '#1877F2' },
-  { text: 'ROAS 5.1x', subtext: 'Google Ads', color: '#34A853' },
-  { text: '+2.1M', subtext: 'Views/Week', color: '#1A1A2E' },
+/* ---------- Shopify sale notifications (LEFT upper half) ---------- */
+
+const SHOPIFY_NOTIFICATIONS = [
+  { text: '+100 Sales', subtext: 'Today' },
+  { text: '+10k Revenue', subtext: 'Today' },
+  { text: '+500', subtext: 'Today' },
+  { text: '+20k Sales', subtext: 'This month' },
 ]
 
-/* ============================================
-   SCALING CHART — Canvas 2D Revenue Chart
-   ============================================ */
+const SHOPIFY_ZONES = [
+  { x: [0.02, 0.20], y: [0.03, 0.18] },
+  { x: [0.24, 0.45], y: [0.05, 0.20] },
+  { x: [0.04, 0.22], y: [0.22, 0.40] },
+  { x: [0.26, 0.45], y: [0.24, 0.40] },
+]
 
-function roundedTopRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-) {
-  ctx.beginPath()
-  ctx.moveTo(x, y + h)
-  ctx.lineTo(x, y + r)
-  ctx.quadraticCurveTo(x, y, x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-  ctx.lineTo(x + w, y + h)
-  ctx.closePath()
+/* ---------- Metric bubbles (RIGHT upper half) ---------- */
+
+const METRIC_BUBBLES = [
+  { text: 'ROAS 4.2x', subtext: 'Meta Ads', color: '#2E9AC4' },
+  { text: '+€12,847', subtext: 'Revenue today', color: '#2E9AC4' },
+  { text: 'CPA €12', subtext: '↓ 23% optimiert', color: '#5CBB5C' },
+  { text: '€1.2M', subtext: 'Monthly Revenue', color: '#5CBB5C' },
+  { text: '68%', subtext: 'Repeat Rate', color: '#1B7EA6' },
+  { text: 'ROAS 5.1x', subtext: 'Google Ads', color: '#34A853' },
+  { text: '€340K', subtext: 'Ad Spend/Mo', color: '#1877F2' },
+]
+
+const METRIC_ZONES = [
+  { x: [0.55, 0.72], y: [0.03, 0.16] },
+  { x: [0.74, 0.96], y: [0.04, 0.18] },
+  { x: [0.56, 0.70], y: [0.18, 0.30] },
+  { x: [0.72, 0.96], y: [0.20, 0.32] },
+  { x: [0.55, 0.68], y: [0.32, 0.40] },
+  { x: [0.70, 0.88], y: [0.33, 0.40] },
+  { x: [0.82, 0.96], y: [0.28, 0.40] },
+]
+
+const BUBBLE_SIZES: ('sm' | 'md' | 'lg')[] = [
+  'md', 'lg', 'sm', 'md', 'sm', 'lg', 'md',
+]
+
+/* ---------- Shopify bag SVG icon ---------- */
+
+function ShopifyBagIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M15.5 6.5C15.5 4.29 13.71 2.5 11.5 2.5C9.29 2.5 7.5 4.29 7.5 6.5"
+        stroke="#5CBB5C"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M5.5 8.5H17.5L18.5 21.5H4.5L5.5 8.5Z"
+        fill="#5CBB5C"
+        stroke="#5CBB5C"
+        strokeWidth="0.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M15.5 6.5C15.5 4.29 13.71 2.5 11.5 2.5C9.29 2.5 7.5 4.29 7.5 6.5"
+        stroke="white"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
 }
 
-function ScalingChart({ show }: { show: boolean }) {
+/* ============================================
+   ANIMATED ASCENDING BARS — Canvas 2D
+   Continuous sine-wave loop
+   ============================================ */
+
+function AnimatedBars({ show }: { show: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number>(0)
-  const startTimeRef = useRef<number>(0)
-  const dataPointsRef = useRef<number[]>([])
   const hasStartedRef = useRef(false)
 
   useEffect(() => {
@@ -64,18 +104,6 @@ function ScalingChart({ show }: { show: boolean }) {
 
     const canvas = canvasRef.current
     if (!canvas) return
-
-    // Generate 24 data points with exponential growth + sine noise
-    const points: number[] = []
-    for (let i = 0; i < 24; i++) {
-      const t = i / 23
-      const base = Math.pow(t, 1.8) * 0.7 + t * 0.3
-      const noise = Math.sin(i * 1.3) * 0.03 + Math.sin(i * 2.7) * 0.02
-      points.push(Math.max(0, Math.min(1, base + noise)))
-    }
-    dataPointsRef.current = points
-
-    startTimeRef.current = performance.now()
 
     let resizeTimeout: ReturnType<typeof setTimeout>
 
@@ -97,6 +125,8 @@ function ScalingChart({ show }: { show: boolean }) {
     }
     window.addEventListener('resize', handleResize)
 
+    const BAR_COUNT = 18
+
     const draw = (now: number) => {
       animationRef.current = requestAnimationFrame(draw)
 
@@ -109,152 +139,64 @@ function ScalingChart({ show }: { show: boolean }) {
 
       if (w === 0 || h === 0) return
 
-      // Check if canvas dimensions need updating
       if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
         canvas.width = w * dpr
         canvas.height = h * dpr
         ctx.scale(dpr, dpr)
       }
 
-      const elapsed = now - startTimeRef.current
-      const rawProgress = Math.min(elapsed / 2500, 1)
-      // easeOutQuart: 1 - pow(1-t, 4)
-      const progress = 1 - Math.pow(1 - rawProgress, 4)
+      ctx.clearRect(0, 0, w, h)
 
-      const data = dataPointsRef.current
+      const t = now * 0.0004 // slow continuous time
 
-      // Chart area
-      const chartLeft = w * 0.08
-      const chartRight = w * 0.92
+      const chartLeft = w * 0.05
+      const chartRight = w * 0.95
+      const chartBottom = h * 0.92
       const chartTop = h * 0.15
-      const chartBottom = h * 0.78
       const chartWidth = chartRight - chartLeft
       const chartHeight = chartBottom - chartTop
 
-      ctx.clearRect(0, 0, w, h)
-
-      // Y-axis labels
-      const yLabels = ['€0', '€250K', '€500K', '€750K', '€1M']
-      ctx.font = '10px "Geist Mono", monospace'
-      ctx.textAlign = 'right'
-      ctx.textBaseline = 'middle'
-      ctx.fillStyle = 'rgba(148,163,184,0.3)'
-      for (let i = 0; i < yLabels.length; i++) {
-        const y = chartBottom - (i / (yLabels.length - 1)) * chartHeight
-        ctx.fillText(yLabels[i], chartLeft - 8, y)
-      }
-
-      // Dashed guide lines
-      ctx.strokeStyle = 'rgba(148,163,184,0.06)'
-      ctx.lineWidth = 0.5
-      ctx.setLineDash([4, 4])
-      for (let i = 0; i < yLabels.length; i++) {
-        const y = chartBottom - (i / (yLabels.length - 1)) * chartHeight
-        ctx.beginPath()
-        ctx.moveTo(chartLeft, y)
-        ctx.lineTo(chartRight, y)
-        ctx.stroke()
-      }
-      ctx.setLineDash([])
-
-      // Bars
-      const barCount = 24
       const totalBarSpace = chartWidth
-      const barGap = totalBarSpace * 0.02
-      const barWidth = (totalBarSpace - barGap * (barCount - 1)) / barCount
+      const barGap = totalBarSpace * 0.025
+      const barWidth = (totalBarSpace - barGap * (BAR_COUNT - 1)) / BAR_COUNT
 
-      for (let i = 0; i < barCount; i++) {
-        const barProgress = Math.max(0, Math.min(1, (progress * 24 - i) / 2))
-        if (barProgress <= 0) continue
-
+      for (let i = 0; i < BAR_COUNT; i++) {
         const x = chartLeft + i * (barWidth + barGap)
-        const barH = data[i] * chartHeight * barProgress
+
+        // Sine wave pattern that continuously cycles
+        // Each bar has a phase offset creating ascending left-to-right wave
+        const phase = (i / BAR_COUNT) * Math.PI * 2
+        const wave1 = Math.sin(t + phase) * 0.3
+        const wave2 = Math.sin(t * 0.7 + phase * 1.3) * 0.15
+        // Base ascending pattern (left low, right high)
+        const ascending = (i / BAR_COUNT) * 0.5 + 0.2
+        const normalizedHeight = Math.max(0.05, Math.min(1, ascending + wave1 + wave2))
+
+        const barH = normalizedHeight * chartHeight
         const barY = chartBottom - barH
         const radius = Math.min(barWidth * 0.4, 6)
 
-        // Vertical gradient for bar
+        // Blue gradient fill
         const grad = ctx.createLinearGradient(x, chartBottom, x, barY)
         grad.addColorStop(0, 'rgba(46,154,196,0.02)')
-        grad.addColorStop(0.5, 'rgba(46,154,196,0.06)')
-        grad.addColorStop(1, 'rgba(46,154,196,0.12)')
+        grad.addColorStop(0.4, 'rgba(46,154,196,0.05)')
+        grad.addColorStop(0.7, 'rgba(86,184,222,0.07)')
+        grad.addColorStop(1, 'rgba(86,184,222,0.10)')
 
         ctx.fillStyle = grad
+
         if (barH > radius) {
-          roundedTopRect(ctx, x, barY, barWidth, barH, radius)
+          ctx.beginPath()
+          ctx.moveTo(x, chartBottom)
+          ctx.lineTo(x, barY + radius)
+          ctx.quadraticCurveTo(x, barY, x + radius, barY)
+          ctx.lineTo(x + barWidth - radius, barY)
+          ctx.quadraticCurveTo(x + barWidth, barY, x + barWidth, barY + radius)
+          ctx.lineTo(x + barWidth, chartBottom)
+          ctx.closePath()
           ctx.fill()
         } else if (barH > 0) {
           ctx.fillRect(x, barY, barWidth, barH)
-        }
-      }
-
-      // Growth curve line
-      const visibleCount = Math.floor(progress * 24)
-      if (visibleCount > 0) {
-        const curvePoints: { x: number; y: number }[] = []
-        for (let i = 0; i <= Math.min(visibleCount, 23); i++) {
-          const bp = Math.max(0, Math.min(1, (progress * 24 - i) / 2))
-          const x = chartLeft + i * (barWidth + barGap) + barWidth / 2
-          const barH = data[i] * chartHeight * bp
-          const y = chartBottom - barH
-          curvePoints.push({ x, y })
-        }
-
-        if (curvePoints.length > 1) {
-          // Line
-          ctx.beginPath()
-          ctx.moveTo(curvePoints[0].x, curvePoints[0].y)
-          for (let i = 1; i < curvePoints.length; i++) {
-            ctx.lineTo(curvePoints[i].x, curvePoints[i].y)
-          }
-          ctx.strokeStyle = '#2E9AC4'
-          ctx.lineWidth = 2.5
-          ctx.lineCap = 'round'
-          ctx.lineJoin = 'round'
-          ctx.stroke()
-
-          // Area fill below curve
-          ctx.beginPath()
-          ctx.moveTo(curvePoints[0].x, curvePoints[0].y)
-          for (let i = 1; i < curvePoints.length; i++) {
-            ctx.lineTo(curvePoints[i].x, curvePoints[i].y)
-          }
-          ctx.lineTo(curvePoints[curvePoints.length - 1].x, chartBottom)
-          ctx.lineTo(curvePoints[0].x, chartBottom)
-          ctx.closePath()
-
-          const areaGrad = ctx.createLinearGradient(0, curvePoints[0].y, 0, chartBottom)
-          areaGrad.addColorStop(0, 'rgba(46,154,196,0.08)')
-          areaGrad.addColorStop(1, 'rgba(46,154,196,0.0)')
-          ctx.fillStyle = areaGrad
-          ctx.fill()
-
-          // Glowing end point
-          const lastPt = curvePoints[curvePoints.length - 1]
-          const pulseOpacity = Math.sin(now * 0.003) * 0.15 + 0.3
-
-          // Radial glow
-          const glowGrad = ctx.createRadialGradient(
-            lastPt.x, lastPt.y, 0,
-            lastPt.x, lastPt.y, 20
-          )
-          glowGrad.addColorStop(0, `rgba(46,154,196,${pulseOpacity})`)
-          glowGrad.addColorStop(1, 'rgba(46,154,196,0)')
-          ctx.fillStyle = glowGrad
-          ctx.beginPath()
-          ctx.arc(lastPt.x, lastPt.y, 20, 0, Math.PI * 2)
-          ctx.fill()
-
-          // Solid dot
-          ctx.fillStyle = '#2E9AC4'
-          ctx.beginPath()
-          ctx.arc(lastPt.x, lastPt.y, 4, 0, Math.PI * 2)
-          ctx.fill()
-
-          // White center
-          ctx.fillStyle = '#FFFFFF'
-          ctx.beginPath()
-          ctx.arc(lastPt.x, lastPt.y, 2, 0, Math.PI * 2)
-          ctx.fill()
         }
       }
     }
@@ -272,23 +214,8 @@ function ScalingChart({ show }: { show: boolean }) {
 }
 
 /* ============================================
-   FLOATING BUBBLES — DOM-animated notifications
+   FLOATING SHOPIFY NOTIFICATIONS (LEFT)
    ============================================ */
-
-const BUBBLE_SIZES: ('sm' | 'md' | 'lg')[] = [
-  'sm', 'md', 'lg', 'md', 'sm', 'lg', 'md', 'sm', 'lg', 'sm', 'md', 'lg', 'sm', 'md',
-]
-
-const BUBBLE_ZONES = [
-  { x: [0.02, 0.22], y: [0.05, 0.35] },   // top-left
-  { x: [0.78, 0.96], y: [0.05, 0.35] },   // top-right
-  { x: [0.02, 0.22], y: [0.65, 0.92] },   // bottom-left
-  { x: [0.78, 0.96], y: [0.65, 0.92] },   // bottom-right
-  { x: [0.25, 0.42], y: [0.02, 0.18] },   // top-center-left
-  { x: [0.58, 0.75], y: [0.02, 0.18] },   // top-center-right
-  { x: [0.25, 0.42], y: [0.82, 0.96] },   // bottom-center-left
-  { x: [0.58, 0.75], y: [0.82, 0.96] },   // bottom-center-right
-]
 
 interface BubbleState {
   baseX: number
@@ -300,10 +227,9 @@ interface BubbleState {
   amplitudeX: number
   amplitudeY: number
   entranceDelay: number
-  visible: boolean
 }
 
-function FloatingBubbles({ show }: { show: boolean }) {
+function ShopifyBubbles({ show }: { show: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const bubblesRef = useRef<(HTMLDivElement | null)[]>([])
   const mouseRef = useRef({ x: 0.5, y: 0.5 })
@@ -320,7 +246,6 @@ function FloatingBubbles({ show }: { show: boolean }) {
     const container = containerRef.current
     if (!container) return
 
-    // Mouse tracking
     const handleMouseMove = (e: MouseEvent) => {
       const rect = container.getBoundingClientRect()
       mouseRef.current.x = (e.clientX - rect.left) / rect.width
@@ -328,23 +253,19 @@ function FloatingBubbles({ show }: { show: boolean }) {
     }
     window.addEventListener('mousemove', handleMouseMove)
 
-    // Initialize bubble states
     const states: BubbleState[] = []
-    for (let i = 0; i < 14; i++) {
-      const zone = BUBBLE_ZONES[i % BUBBLE_ZONES.length]
-      const baseX = zone.x[0] + Math.random() * (zone.x[1] - zone.x[0])
-      const baseY = zone.y[0] + Math.random() * (zone.y[1] - zone.y[0])
+    for (let i = 0; i < SHOPIFY_NOTIFICATIONS.length; i++) {
+      const zone = SHOPIFY_ZONES[i]
       states.push({
-        baseX,
-        baseY,
-        speedX: 0.3 + Math.random() * 0.5,
-        speedY: 0.2 + Math.random() * 0.4,
+        baseX: zone.x[0] + Math.random() * (zone.x[1] - zone.x[0]),
+        baseY: zone.y[0] + Math.random() * (zone.y[1] - zone.y[0]),
+        speedX: 0.25 + Math.random() * 0.4,
+        speedY: 0.2 + Math.random() * 0.35,
         phaseX: Math.random() * Math.PI * 2,
         phaseY: Math.random() * Math.PI * 2,
-        amplitudeX: 8 + Math.random() * 16,
-        amplitudeY: 6 + Math.random() * 12,
-        entranceDelay: 800 + i * 150,
-        visible: false,
+        amplitudeX: 6 + Math.random() * 12,
+        amplitudeY: 5 + Math.random() * 10,
+        entranceDelay: 800 + i * 200,
       })
     }
     statesRef.current = states
@@ -357,16 +278,200 @@ function FloatingBubbles({ show }: { show: boolean }) {
       const h = container.offsetHeight
       if (w === 0 || h === 0) return
 
-      // Determine how many to show based on viewport
       const viewportWidth = window.innerWidth
-      let maxVisible = 14
-      if (viewportWidth < 768) maxVisible = 6
-      else if (viewportWidth <= 1024) maxVisible = 10
+      if (viewportWidth < 768) {
+        // Hide on mobile
+        for (let i = 0; i < SHOPIFY_NOTIFICATIONS.length; i++) {
+          const el = bubblesRef.current[i]
+          if (el) el.style.opacity = '0'
+        }
+        return
+      }
 
       const mx = mouseRef.current.x
       const my = mouseRef.current.y
 
-      for (let i = 0; i < 14; i++) {
+      for (let i = 0; i < SHOPIFY_NOTIFICATIONS.length; i++) {
+        const el = bubblesRef.current[i]
+        if (!el) continue
+
+        const st = statesRef.current[i]
+
+        if (elapsed < st.entranceDelay) {
+          el.style.opacity = '0'
+          continue
+        }
+
+        const fadeIn = Math.min(1, (elapsed - st.entranceDelay) / 600)
+
+        const t = now * 0.001
+        const lissX = Math.sin(t * st.speedX + st.phaseX) * st.amplitudeX
+        const lissY = Math.cos(t * st.speedY + st.phaseY) * st.amplitudeY
+
+        const parallaxStrength = 12
+        const parallaxX = (mx - 0.5) * parallaxStrength * (i % 2 === 0 ? 1 : -0.6)
+        const parallaxY = (my - 0.5) * parallaxStrength * (i % 2 === 0 ? -0.6 : 1)
+
+        const finalX = st.baseX * w + lissX + parallaxX
+        const finalY = st.baseY * h + lissY + parallaxY
+
+        el.style.transform = `translate3d(${finalX}px, ${finalY}px, 0)`
+        el.style.opacity = String(fadeIn * 0.92)
+      }
+    }
+
+    animFrameRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      cancelAnimationFrame(animFrameRef.current)
+      window.removeEventListener('mousemove', handleMouseMove)
+    }
+  }, [show])
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 5,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+      }}
+    >
+      {SHOPIFY_NOTIFICATIONS.map((notif, i) => (
+        <div
+          key={`shopify-${i}`}
+          ref={(el) => { bubblesRef.current[i] = el }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 16px',
+            borderRadius: 16,
+            background: 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.95)',
+            boxShadow:
+              '0 2px 8px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.5)',
+            willChange: 'transform',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            opacity: 0,
+            fontSize: 13,
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: 'rgba(92,187,92,0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <ShopifyBagIcon size={20} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                color: '#1A1A2E',
+                lineHeight: 1.1,
+                letterSpacing: '-0.01em',
+                fontSize: 14,
+              }}
+            >
+              {notif.text}
+            </span>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 400,
+                fontSize: 10,
+                color: '#94A3B8',
+                lineHeight: 1.1,
+              }}
+            >
+              {notif.subtext}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ============================================
+   FLOATING METRIC BUBBLES (RIGHT)
+   ============================================ */
+
+function MetricBubbles({ show }: { show: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const bubblesRef = useRef<(HTMLDivElement | null)[]>([])
+  const mouseRef = useRef({ x: 0.5, y: 0.5 })
+  const statesRef = useRef<BubbleState[]>([])
+  const animFrameRef = useRef<number>(0)
+  const showTimeRef = useRef<number>(0)
+  const initializedRef = useRef(false)
+
+  useEffect(() => {
+    if (!show || initializedRef.current) return
+    initializedRef.current = true
+    showTimeRef.current = performance.now()
+
+    const container = containerRef.current
+    if (!container) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect()
+      mouseRef.current.x = (e.clientX - rect.left) / rect.width
+      mouseRef.current.y = (e.clientY - rect.top) / rect.height
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+
+    const states: BubbleState[] = []
+    for (let i = 0; i < METRIC_BUBBLES.length; i++) {
+      const zone = METRIC_ZONES[i]
+      states.push({
+        baseX: zone.x[0] + Math.random() * (zone.x[1] - zone.x[0]),
+        baseY: zone.y[0] + Math.random() * (zone.y[1] - zone.y[0]),
+        speedX: 0.3 + Math.random() * 0.5,
+        speedY: 0.2 + Math.random() * 0.4,
+        phaseX: Math.random() * Math.PI * 2,
+        phaseY: Math.random() * Math.PI * 2,
+        amplitudeX: 8 + Math.random() * 16,
+        amplitudeY: 6 + Math.random() * 12,
+        entranceDelay: 900 + i * 150,
+      })
+    }
+    statesRef.current = states
+
+    const animate = (now: number) => {
+      animFrameRef.current = requestAnimationFrame(animate)
+
+      const elapsed = now - showTimeRef.current
+      const w = container.offsetWidth
+      const h = container.offsetHeight
+      if (w === 0 || h === 0) return
+
+      const viewportWidth = window.innerWidth
+      let maxVisible = 7
+      if (viewportWidth < 768) maxVisible = 0
+      else if (viewportWidth <= 1024) maxVisible = 5
+
+      const mx = mouseRef.current.x
+      const my = mouseRef.current.y
+
+      for (let i = 0; i < METRIC_BUBBLES.length; i++) {
         const el = bubblesRef.current[i]
         if (!el) continue
 
@@ -377,7 +482,6 @@ function FloatingBubbles({ show }: { show: boolean }) {
           continue
         }
 
-        // Entrance timing
         if (elapsed < st.entranceDelay) {
           el.style.opacity = '0'
           continue
@@ -385,12 +489,10 @@ function FloatingBubbles({ show }: { show: boolean }) {
 
         const fadeIn = Math.min(1, (elapsed - st.entranceDelay) / 600)
 
-        // Lissajous offset
         const t = now * 0.001
         const lissX = Math.sin(t * st.speedX + st.phaseX) * st.amplitudeX
         const lissY = Math.cos(t * st.speedY + st.phaseY) * st.amplitudeY
 
-        // Mouse parallax offset (subtle)
         const parallaxStrength = 15
         const parallaxX = (mx - 0.5) * parallaxStrength * (i % 2 === 0 ? 1 : -0.6)
         const parallaxY = (my - 0.5) * parallaxStrength * (i % 2 === 0 ? -0.6 : 1)
@@ -422,11 +524,11 @@ function FloatingBubbles({ show }: { show: boolean }) {
         overflow: 'hidden',
       }}
     >
-      {NOTIFICATION_BUBBLES.map((bubble, i) => {
+      {METRIC_BUBBLES.map((bubble, i) => {
         const size = BUBBLE_SIZES[i]
         return (
           <div
-            key={i}
+            key={`metric-${i}`}
             ref={(el) => { bubblesRef.current[i] = el }}
             style={{
               position: 'absolute',
@@ -506,135 +608,6 @@ function FloatingBubbles({ show }: { show: boolean }) {
           </div>
         )
       })}
-    </div>
-  )
-}
-
-/* ============================================
-   METRIC ITEM — Counter Animation
-   ============================================ */
-
-function MetricItem({
-  metric,
-  index,
-  shouldAnimate,
-  isMobile,
-}: {
-  metric: { value: string; label: string }
-  index: number
-  shouldAnimate: boolean
-  isMobile: boolean
-}) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [counterDisplay, setCounterDisplay] = useState(metric.value)
-  const hasAnimated = useRef(false)
-
-  const parsed = useMemo(() => {
-    const match = metric.value.match(/^([^0-9]*)([0-9]+(?:\.[0-9]+)?)(.*)$/)
-    if (!match) return null
-    return {
-      prefix: match[1],
-      number: parseFloat(match[2]),
-      suffix: match[3],
-      isFloat: match[2].includes('.'),
-    }
-  }, [metric.value])
-
-  useEffect(() => {
-    if (!shouldAnimate || !parsed || hasAnimated.current || !ref.current) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true
-          observer.disconnect()
-
-          const startTime = performance.now()
-          const target = parsed.number
-          const duration = 2000
-
-          const animate = (now: number) => {
-            const elapsed = now - startTime
-            const progress = Math.min(elapsed / duration, 1)
-            const eased = 1 - Math.pow(1 - progress, 4)
-            const current = eased * target
-
-            if (parsed.isFloat) {
-              setCounterDisplay(`${parsed.prefix}${current.toFixed(1)}${parsed.suffix}`)
-            } else {
-              setCounterDisplay(`${parsed.prefix}${Math.round(current)}${parsed.suffix}`)
-            }
-
-            if (progress < 1) {
-              requestAnimationFrame(animate)
-            } else {
-              setCounterDisplay(metric.value)
-            }
-          }
-
-          requestAnimationFrame(animate)
-        }
-      },
-      { threshold: 0.3 }
-    )
-
-    observer.observe(ref.current)
-    return () => observer.disconnect()
-  }, [shouldAnimate, parsed, metric.value])
-
-  const showBorder = isMobile ? index % 2 !== 0 : index > 0
-
-  return (
-    <div
-      ref={ref}
-      style={{
-        padding: isMobile ? '16px 20px' : '20px 28px',
-        borderLeft: showBorder ? '1px solid rgba(46,154,196,0.15)' : 'none',
-        textAlign: 'center',
-      }}
-    >
-      <div
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 800,
-          fontSize: 'clamp(32px, 3.5vw, 56px)',
-          letterSpacing: '-0.03em',
-          lineHeight: 1.1,
-          background: 'linear-gradient(180deg, #1A1A2E 30%, #2E9AC4 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        }}
-      >
-        {counterDisplay}
-      </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-          fontFamily: 'var(--font-mono)',
-          fontWeight: 500,
-          fontSize: 10,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase' as const,
-          color: '#94A3B8',
-          marginTop: 8,
-        }}
-      >
-        <span
-          style={{
-            width: 4,
-            height: 4,
-            borderRadius: '50%',
-            background: '#5CBB5C',
-            boxShadow: '0 0 6px rgba(92,187,92,0.6)',
-            flexShrink: 0,
-          }}
-        />
-        {metric.label}
-      </div>
     </div>
   )
 }
@@ -771,8 +744,68 @@ function ScrollIndicator({ show }: { show: boolean }) {
 }
 
 /* ============================================
-   HERO COMPONENT — Scaling Dashboard
+   TRUSTED LOGO — with fallback text
    ============================================ */
+
+function TrustedLogo({ logo }: { logo: { name: string; domain: string } }) {
+  const [failed, setFailed] = useState(false)
+
+  if (failed) {
+    return (
+      <span
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 600,
+          fontSize: 12,
+          letterSpacing: '0.04em',
+          color: '#94A3B8',
+          opacity: 0.5,
+          transition: 'opacity 0.3s ease',
+          cursor: 'default',
+          userSelect: 'none',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = '0.8'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = '0.5'
+        }}
+      >
+        {logo.name}
+      </span>
+    )
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`https://logo.clearbit.com/${logo.domain}`}
+      alt={logo.name}
+      crossOrigin="anonymous"
+      style={{
+        height: 24,
+        opacity: 0.4,
+        filter: 'grayscale(100%)',
+        transition: 'opacity 0.3s ease, filter 0.3s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.opacity = '0.7'
+        e.currentTarget.style.filter = 'grayscale(0%)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.opacity = '0.4'
+        e.currentTarget.style.filter = 'grayscale(100%)'
+      }}
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
+/* ============================================
+   HERO COMPONENT — v5.4
+   ============================================ */
+
+const HEADLINE_WORDS = ['Wir', 'skalieren', 'deine', 'E-Com-Marke']
 
 export default function Hero({ introComplete }: { introComplete: boolean }) {
   const [show, setShow] = useState(false)
@@ -817,26 +850,24 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.6; transform: scale(1.4); }
         }
-        @keyframes shimmer {
-          0% { background-position: 200% center; }
-          100% { background-position: -200% center; }
-        }
         @keyframes scrollBounce {
           0%, 100% { top: 4px; }
           50% { top: 28px; }
         }
       `}</style>
 
-      {/* Layer 0 — Grid background */}
+      {/* Layer 0 — Striped/checkered grid background */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           backgroundImage: `
             linear-gradient(rgba(46,154,196,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(46,154,196,0.03) 1px, transparent 1px)
+            linear-gradient(90deg, rgba(46,154,196,0.03) 1px, transparent 1px),
+            linear-gradient(rgba(46,154,196,0.015) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(46,154,196,0.015) 1px, transparent 1px)
           `,
-          backgroundSize: '60px 60px',
+          backgroundSize: '60px 60px, 60px 60px, 20px 20px, 20px 20px',
           WebkitMaskImage:
             'radial-gradient(ellipse 80% 70% at 50% 55%, black 30%, transparent 80%)',
           maskImage:
@@ -845,19 +876,19 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
         }}
       />
 
-      {/* Layer 1 — Canvas chart */}
+      {/* Layer 1 — Animated ascending bars (Canvas) */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-        <ScalingChart show={show} />
+        <AnimatedBars show={show} />
       </div>
 
-      {/* Layer 2 — Floating bubbles */}
-      <FloatingBubbles show={show} />
+      {/* Layer 2a — Shopify sale notifications (LEFT upper half) */}
+      <ShopifyBubbles show={show} />
 
-      {/* Layer 3 — Content card */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={show ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.6, delay: 0.4, ease: EASE_OUT_EXPO }}
+      {/* Layer 2b — Metric bubbles (RIGHT upper half) */}
+      <MetricBubbles show={show} />
+
+      {/* Layer 3 — Content (NO card wrapper, directly on page) */}
+      <div
         style={{
           position: 'relative',
           zIndex: 10,
@@ -869,13 +900,6 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
               ? '40px 32px'
               : 'clamp(40px, 5vw, 64px) clamp(32px, 4vw, 56px)',
           textAlign: 'center',
-          background: 'rgba(255,255,255,0.72)',
-          backdropFilter: 'blur(40px) saturate(1.4)',
-          WebkitBackdropFilter: 'blur(40px) saturate(1.4)',
-          borderRadius: isMobile ? 20 : isTablet ? 24 : 28,
-          border: '1px solid rgba(255,255,255,0.85)',
-          boxShadow:
-            '0 4px 16px rgba(0,0,0,0.03), 0 16px 64px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6)',
         }}
       >
         {/* Badge */}
@@ -918,7 +942,7 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
           </span>
         </motion.div>
 
-        {/* Headline */}
+        {/* Headline — "Wir skalieren deine E-Com-Marke" all same font */}
         <h1
           style={{
             fontFamily: 'var(--font-display)',
@@ -930,43 +954,22 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
             margin: 0,
           }}
         >
-          {[
-            { text: 'Your next', delay: 0.7 },
-            { text: null, delay: 0.85, accent: true },
-            { text: 'growth chapter', delay: 1.0 },
-            { text: 'starts here.', delay: 1.15 },
-          ].map((line, i) => (
+          {HEADLINE_WORDS.map((word, i) => (
             <motion.span
               key={i}
               initial={{ opacity: 0, y: 30 }}
               animate={show ? { opacity: 1, y: 0 } : {}}
               transition={{
                 duration: 0.6,
-                delay: line.delay,
+                delay: 0.7 + i * 0.12,
                 ease: EASE_OUT_EXPO,
               }}
-              style={{ display: 'block' }}
+              style={{
+                display: 'inline-block',
+                marginRight: '0.22em',
+              }}
             >
-              {line.accent ? (
-                <span
-                  style={{
-                    fontFamily: 'var(--font-accent)',
-                    fontWeight: 400,
-                    fontSize: '115%',
-                    background:
-                      'linear-gradient(90deg, #56B8DE, #2E9AC4, #1B7EA6, #56B8DE, #2E9AC4)',
-                    backgroundSize: '200% auto',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    animation: 'shimmer 4s linear infinite',
-                  }}
-                >
-                  satisfying
-                </span>
-              ) : (
-                line.text
-              )}
+              {word}
             </motion.span>
           ))}
         </h1>
@@ -1039,33 +1042,7 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
             Case Studies ansehen
           </a>
         </motion.div>
-
-        {/* Metrics row */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={show ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 1.8, ease: EASE_OUT_EXPO }}
-          style={{
-            display: isMobile ? 'grid' : 'flex',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : undefined,
-            flexDirection: isMobile ? undefined : 'row',
-            justifyContent: 'center',
-            marginTop: 36,
-            paddingTop: 28,
-            borderTop: '1px solid rgba(46,154,196,0.08)',
-          }}
-        >
-          {HERO_METRICS.map((metric, i) => (
-            <MetricItem
-              key={metric.label}
-              metric={metric}
-              index={i}
-              shouldAnimate={show}
-              isMobile={isMobile}
-            />
-          ))}
-        </motion.div>
-      </motion.div>
+      </div>
 
       {/* Trusted By logos */}
       <motion.div
@@ -1103,28 +1080,7 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
           }}
         >
           {TRUSTED_LOGOS.map((logo) => (
-            <img
-              key={logo.name}
-              src={`https://logo.clearbit.com/${logo.domain}`}
-              alt={logo.name}
-              style={{
-                height: 20,
-                opacity: 0.35,
-                filter: 'grayscale(100%)',
-                transition: 'opacity 0.3s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.7'
-                e.currentTarget.style.filter = 'grayscale(0%)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.35'
-                e.currentTarget.style.filter = 'grayscale(100%)'
-              }}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none'
-              }}
-            />
+            <TrustedLogo key={logo.name} logo={logo} />
           ))}
         </div>
       </motion.div>

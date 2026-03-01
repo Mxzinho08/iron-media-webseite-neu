@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic'
 import Navigation from '@/components/layout/Navigation'
 import Hero from '@/components/sections/Hero'
 import CaseStudies from '@/components/sections/CaseStudies'
+import Awards from '@/components/sections/Awards'
+import FeaturedIn from '@/components/sections/FeaturedIn'
 
 const IntroAnimation = dynamic(() => import('@/components/intro/IntroAnimation'), {
   ssr: false,
@@ -22,6 +24,8 @@ export default function Home() {
       <main className="relative">
         <Hero introComplete={introComplete} />
         <CaseStudies />
+        <Awards />
+        <FeaturedIn />
       </main>
     </>
   )

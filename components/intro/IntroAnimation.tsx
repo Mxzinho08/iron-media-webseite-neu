@@ -26,22 +26,23 @@ const COLORS = {
 
 const EASE_BOUNCY = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const EASE_FADE = 'cubic-bezier(0.4, 0, 0.2, 1)'
-const EASE_OUT_EXPO = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const EASE_MEDIA = 'cubic-bezier(0.25, 1, 0.5, 1)'
 
 const IRON_LETTERS = ['I', 'R', 'O', 'N']
 
-const PHASE1_WORDS: { text: string; row: 1 | 2; isLevel?: boolean }[] = [
+const PHASE1_WORDS: { text: string; row: 1 | 2 }[] = [
   { text: 'We', row: 1 },
   { text: 'scale', row: 1 },
   { text: 'Ecom', row: 1 },
-  { text: 'Brands', row: 1 },
-  { text: 'aufs', row: 2 },
-  { text: 'nächste', row: 2 },
-  { text: 'Level', row: 2, isLevel: true },
+  { text: 'brands', row: 1 },
+  { text: 'to', row: 2 },
+  { text: 'the', row: 2 },
+  { text: 'next', row: 2 },
+  { text: 'level', row: 2 },
 ]
 
-const WORD_TIMINGS = [400, 500, 600, 700, 850, 950, 1050]
+// Timings: start at 300ms, stagger 80ms apart
+const WORD_TIMINGS = [300, 380, 460, 540, 620, 700, 780, 860]
 
 const KEYFRAMES_CSS = `
 @keyframes wordBounce {
@@ -76,12 +77,13 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
 
   // Phase 1 refs
   const phase1Ref = useRef<HTMLDivElement>(null)
+  const textBlockRef = useRef<HTMLDivElement>(null)
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([])
   const levelUnderlineRef = useRef<HTMLSpanElement>(null)
-  const logoRefs = useRef<(HTMLImageElement | null)[]>([])
+  const logoRefs = useRef<(HTMLElement | null)[]>([])
 
-  // Phase 2 refs
-  const phase2Ref = useRef<HTMLDivElement>(null)
+  // Phase 2 refs (logo appears ABOVE the text)
+  const logoGroupRef = useRef<HTMLDivElement>(null)
   const bar1Ref = useRef<HTMLDivElement>(null)
   const bar2Ref = useRef<HTMLDivElement>(null)
   const bar3Ref = useRef<HTMLDivElement>(null)
@@ -133,8 +135,9 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   // Main animation sequence
   useEffect(() => {
     const phase1 = phase1Ref.current
-    const phase2 = phase2Ref.current
+    const textBlock = textBlockRef.current
     const levelUnderline = levelUnderlineRef.current
+    const logoGroup = logoGroupRef.current
     const bar1 = bar1Ref.current
     const bar2 = bar2Ref.current
     const bar3 = bar3Ref.current
@@ -144,7 +147,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     const radialPulse = radialPulseRef.current
 
     if (
-      !phase1 || !phase2 || !levelUnderline ||
+      !phase1 || !textBlock || !levelUnderline || !logoGroup ||
       !bar1 || !bar2 || !bar3 || !barsGroup ||
       !media || !ironContainer || !radialPulse
     ) return
@@ -169,20 +172,21 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       el.style.transform = 'translateY(8px) scale(0.96)'
     })
 
-    // Phase 2: hidden
-    phase2.style.opacity = '0'
-    phase2.style.pointerEvents = 'none'
+    // Logo group (Iron Media bars + text): hidden above
+    logoGroup.style.opacity = '0'
+    logoGroup.style.transform = 'translateY(-20px) scale(0.95)'
+
     bar1.style.opacity = '0'
     bar2.style.opacity = '0'
     bar3.style.opacity = '0'
-    bar2.style.transform = 'translateY(-100vh)'
-    bar1.style.transform = 'translateX(-50vw) rotate(-12deg)'
-    bar3.style.transform = 'translateX(50vw) rotate(12deg)'
+    bar2.style.transform = 'translateY(-40px)'
+    bar1.style.transform = 'translateX(-30px) rotate(-8deg)'
+    bar3.style.transform = 'translateX(30px) rotate(8deg)'
 
     ironLetterRefs.current.forEach((el) => {
       if (!el) return
       el.style.opacity = '0'
-      el.style.transform = 'translateY(-15px) scale(0.97)'
+      el.style.transform = 'translateY(-12px) scale(0.97)'
     })
     media.style.opacity = '0'
     media.style.letterSpacing = '0.8em'
@@ -192,10 +196,14 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     radialPulse.style.transform = 'scale(0)'
 
     // ═══════════════════════════════════════════
-    // PHASE 1: Statement + Brands (T=0 -> T=2900ms)
+    // PHASE 1: Statement + Brands (T=0 -> T=2200ms)
+    // Words at 300ms, stagger 80ms
+    // Underline at 900ms
+    // Brand logos at 1300ms
+    // Phase 1 fadeout at 2200ms
     // ═══════════════════════════════════════════
 
-    // Word-by-word Pixar bounce
+    // Word-by-word bounce
     PHASE1_WORDS.forEach((_, i) => {
       schedule(() => {
         const el = wordRefs.current[i]
@@ -204,190 +212,160 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       }, WORD_TIMINGS[i])
     })
 
-    // T=1200ms: Gradient underline on "Level" draws from left (300ms)
+    // T=900ms: Gradient underline on "level"
     schedule(() => {
       levelUnderline.style.transition = `transform 300ms ${EASE_BOUNCY}`
       levelUnderline.style.transform = 'scaleX(1)'
-    }, 1200)
+    }, 900)
 
-    // T=1800ms: Brand logos bounce in with stagger (50ms apart)
+    // T=1300ms: Brand logos bounce in with stagger (50ms apart)
     INTRO_BRANDS.forEach((_, i) => {
       schedule(() => {
         const el = logoRefs.current[i]
         if (!el) return
         el.style.animation = `logoBounceIn 350ms ${EASE_BOUNCY} forwards`
-      }, 1800 + i * 50)
+      }, 1300 + i * 50)
     })
 
-    // T=2900ms: Everything fades out + scale(0.98)
-    schedule(() => {
-      phase1.style.transition = `opacity 300ms ${EASE_FADE}, transform 300ms ${EASE_FADE}`
-      phase1.style.opacity = '0'
-      phase1.style.transform = 'scale(0.98)'
-    }, 2900)
-
     // ═══════════════════════════════════════════
-    // PHASE 2: Logo Entrance (T=3200ms -> T=4700ms)
+    // PHASE 2: Iron Media logo appears ABOVE text (T=2500ms)
+    // Text shifts down, logo group fades in above
     // ═══════════════════════════════════════════
 
-    // T=3200ms: Show phase 2 container
+    // T=2200ms: Shift text block down to make room
     schedule(() => {
-      phase2.style.opacity = '1'
-      phase2.style.pointerEvents = 'auto'
-    }, 3200)
+      textBlock.style.transition = `transform 400ms ${EASE_BOUNCY}`
+      textBlock.style.transform = 'translateY(40px)'
+    }, 2200)
 
-    // T=3400ms: Bar 2 (center, tallest) falls from top
+    // T=2500ms: Show logo group above text
+    schedule(() => {
+      logoGroup.style.transition = `opacity 350ms ${EASE_FADE}, transform 350ms ${EASE_BOUNCY}`
+      logoGroup.style.opacity = '1'
+      logoGroup.style.transform = 'translateY(0) scale(1)'
+    }, 2500)
+
+    // T=2550ms: Bar 2 (center, tallest) drops in
     schedule(() => {
       bar2.style.opacity = '1'
-      bar2.style.transition = `transform 400ms ${EASE_BOUNCY}`
+      bar2.style.transition = `transform 300ms ${EASE_BOUNCY}`
       bar2.style.transform = 'translateY(0)'
-    }, 3400)
+    }, 2550)
 
-    // Bar 2 squash & stretch on landing (T=3800)
-    schedule(() => {
-      bar2.style.transition = 'transform 120ms ease-out'
-      bar2.style.transform = 'scaleY(0.65) scaleX(1.35)'
-    }, 3800)
-    schedule(() => {
-      bar2.style.transition = 'transform 100ms ease-in-out'
-      bar2.style.transform = 'scaleY(1.18) scaleX(0.88)'
-    }, 3920)
-    schedule(() => {
-      bar2.style.transition = 'transform 80ms ease-in-out'
-      bar2.style.transform = 'scaleY(0.94) scaleX(1.04)'
-    }, 4020)
-    schedule(() => {
-      bar2.style.transition = 'transform 80ms ease-in-out'
-      bar2.style.transform = 'scaleY(1.03) scaleX(0.98)'
-    }, 4100)
+    // Bar 2 squash on landing
     schedule(() => {
       bar2.style.transition = 'transform 80ms ease-out'
+      bar2.style.transform = 'scaleY(0.75) scaleX(1.25)'
+    }, 2850)
+    schedule(() => {
+      bar2.style.transition = 'transform 70ms ease-in-out'
+      bar2.style.transform = 'scaleY(1.1) scaleX(0.92)'
+    }, 2930)
+    schedule(() => {
+      bar2.style.transition = 'transform 60ms ease-out'
       bar2.style.transform = 'scaleY(1) scaleX(1)'
-    }, 4180)
+    }, 3000)
 
-    // T=3650ms: Bar 1 flies from left with rotation
+    // T=2650ms: Bar 1 flies from left
     schedule(() => {
       bar1.style.opacity = '1'
-      bar1.style.transition = `transform 380ms ${EASE_BOUNCY}, opacity 150ms ease-out`
+      bar1.style.transition = `transform 280ms ${EASE_BOUNCY}, opacity 120ms ease-out`
       bar1.style.transform = 'translateX(0) rotate(0deg)'
-    }, 3650)
+    }, 2650)
 
-    // Bar 1 settle
-    schedule(() => {
-      bar1.style.transition = 'transform 80ms ease-out'
-      bar1.style.transform = 'scaleX(1.08)'
-    }, 4030)
-    schedule(() => {
-      bar1.style.transition = 'transform 70ms ease-in-out'
-      bar1.style.transform = 'scaleX(0.97)'
-    }, 4110)
-    schedule(() => {
-      bar1.style.transition = 'transform 60ms ease-out'
-      bar1.style.transform = 'scaleX(1.0)'
-    }, 4180)
-
-    // T=3850ms: Bar 3 flies from right with rotation
+    // T=2750ms: Bar 3 flies from right
     schedule(() => {
       bar3.style.opacity = '1'
-      bar3.style.transition = `transform 380ms ${EASE_BOUNCY}, opacity 150ms ease-out`
+      bar3.style.transition = `transform 280ms ${EASE_BOUNCY}, opacity 120ms ease-out`
       bar3.style.transform = 'translateX(0) rotate(0deg)'
-    }, 3850)
+    }, 2750)
 
-    // Bar 3 settle
-    schedule(() => {
-      bar3.style.transition = 'transform 80ms ease-out'
-      bar3.style.transform = 'scaleX(1.08)'
-    }, 4230)
-    schedule(() => {
-      bar3.style.transition = 'transform 70ms ease-in-out'
-      bar3.style.transform = 'scaleX(0.97)'
-    }, 4310)
-    schedule(() => {
-      bar3.style.transition = 'transform 60ms ease-out'
-      bar3.style.transform = 'scaleX(1.0)'
-    }, 4380)
-
-    // T=4100ms: Sync pulse on all bars
+    // T=2850ms: Sync pulse on bars
     schedule(() => {
       ;[bar1, bar2, bar3].forEach((bar) => {
-        bar.style.transition = 'transform 125ms ease-in-out, box-shadow 125ms ease-in-out'
-        bar.style.transform = 'scale(1.035)'
-        bar.style.boxShadow = `0 0 24px ${COLORS.oceanBlue}40`
+        bar.style.transition = 'transform 100ms ease-in-out, box-shadow 100ms ease-in-out'
+        bar.style.transform = 'scale(1.04)'
+        bar.style.boxShadow = `0 0 20px ${COLORS.oceanBlue}40`
       })
-    }, 4100)
+    }, 2950)
     schedule(() => {
       ;[bar1, bar2, bar3].forEach((bar) => {
-        bar.style.transition = 'transform 125ms ease-out, box-shadow 200ms ease-out'
+        bar.style.transition = 'transform 100ms ease-out, box-shadow 150ms ease-out'
         bar.style.transform = 'scale(1.0)'
         bar.style.boxShadow = '0 0 0px transparent'
       })
-    }, 4225)
+    }, 3050)
 
-    // T=4200ms: "IRON" character stagger
+    // T=2900ms: "IRON" character stagger
     IRON_LETTERS.forEach((_, i) => {
       schedule(() => {
         const el = ironLetterRefs.current[i]
         if (!el) return
-        el.style.animation = `bounceInChar 350ms ${EASE_BOUNCY} forwards`
-      }, 4200 + i * 50)
+        el.style.animation = `bounceInChar 300ms ${EASE_BOUNCY} forwards`
+      }, 2900 + i * 40)
     })
 
-    // T=4400ms: "MEDIA" tracking animation
+    // T=3050ms: "MEDIA" tracking animation
     schedule(() => {
-      media.style.transition = `letter-spacing 400ms ${EASE_MEDIA}, opacity 400ms ${EASE_MEDIA}`
+      media.style.transition = `letter-spacing 350ms ${EASE_MEDIA}, opacity 350ms ${EASE_MEDIA}`
       media.style.opacity = '1'
       media.style.letterSpacing = '0.35em'
-    }, 4400)
+    }, 3050)
 
     // ═══════════════════════════════════════════
-    // PHASE 3: Blur & Dissolve Outro (T=4700ms -> T=5500ms)
+    // PHASE 3: Everything wipes away (T=3200ms -> T=4000ms)
     // ═══════════════════════════════════════════
 
-    // T=4700ms: "IRON" + "MEDIA" text fades out (200ms)
+    // T=3200ms: Fade out everything together
     schedule(() => {
-      ironContainer.style.transition = `opacity 200ms ${EASE_FADE}`
-      ironContainer.style.opacity = '0'
-      media.style.transition = `opacity 200ms ${EASE_FADE}`
-      media.style.opacity = '0'
-    }, 4700)
+      // Fade out text + logos
+      phase1.style.transition = `opacity 250ms ${EASE_FADE}, transform 250ms ${EASE_FADE}`
+      phase1.style.opacity = '0'
+      phase1.style.transform = 'scale(0.97)'
 
-    // T=4900ms: Bars gentle rotation + blur + staggered fade
+      // Fade out Iron Media logo group
+      logoGroup.style.transition = `opacity 250ms ${EASE_FADE}, transform 250ms ${EASE_FADE}`
+      logoGroup.style.opacity = '0'
+      logoGroup.style.transform = 'translateY(-10px) scale(0.97)'
+    }, 3200)
+
+    // T=3400ms: Bars blur + dissolve
     schedule(() => {
-      bar1.style.transition = 'opacity 300ms ease-out, filter 400ms ease-out, transform 400ms ease-out'
-      bar1.style.transform = 'rotate(5deg)'
-      bar1.style.filter = 'blur(8px)'
+      bar1.style.transition = 'opacity 200ms ease-out, filter 300ms ease-out, transform 300ms ease-out'
+      bar1.style.transform = 'rotate(4deg)'
+      bar1.style.filter = 'blur(6px)'
       bar1.style.opacity = '0'
-    }, 4900)
+    }, 3350)
 
     schedule(() => {
-      bar2.style.transition = 'opacity 300ms ease-out, filter 400ms ease-out, transform 400ms ease-out'
-      bar2.style.transform = 'rotate(-3deg)'
-      bar2.style.filter = 'blur(8px)'
+      bar2.style.transition = 'opacity 200ms ease-out, filter 300ms ease-out, transform 300ms ease-out'
+      bar2.style.transform = 'rotate(-2deg)'
+      bar2.style.filter = 'blur(6px)'
       bar2.style.opacity = '0'
-    }, 5000)
+    }, 3400)
 
     schedule(() => {
-      bar3.style.transition = 'opacity 300ms ease-out, filter 400ms ease-out, transform 400ms ease-out'
-      bar3.style.transform = 'rotate(4deg)'
-      bar3.style.filter = 'blur(8px)'
+      bar3.style.transition = 'opacity 200ms ease-out, filter 300ms ease-out, transform 300ms ease-out'
+      bar3.style.transform = 'rotate(3deg)'
+      bar3.style.filter = 'blur(6px)'
       bar3.style.opacity = '0'
-    }, 5100)
+    }, 3450)
 
-    // T=5100ms: Subtle radial light pulse
+    // T=3500ms: Radial pulse
     schedule(() => {
-      radialPulse.style.animation = 'radialPulse 400ms ease-out forwards'
-    }, 5100)
+      radialPulse.style.animation = 'radialPulse 300ms ease-out forwards'
+    }, 3500)
 
-    // T=5200ms: Overlay background fades to transparent (300ms)
+    // T=3600ms: Overlay fades to transparent
     schedule(() => {
       const overlay = overlayRef.current
       if (overlay) {
         overlay.style.transition = `opacity 300ms ${EASE_FADE}`
         overlay.style.opacity = '0'
       }
-    }, 5200)
+    }, 3600)
 
-    // T=5500ms: onComplete, display: none
+    // T=4000ms: Complete
     schedule(() => {
       if (completedRef.current) return
       completedRef.current = true
@@ -396,7 +374,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
         overlay.style.display = 'none'
       }
       onComplete()
-    }, 5500)
+    }, 4000)
   }, [schedule, onComplete, finish])
 
   // Cleanup on unmount
@@ -423,14 +401,13 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     word: (typeof PHASE1_WORDS)[number],
     globalIndex: number,
   ) => {
-    const isLevel = word.isLevel
+    const isLastWord = globalIndex === PHASE1_WORDS.length - 1
 
     const wordStyle: React.CSSProperties = {
       display: 'inline-block',
-      fontFamily: isLevel ? 'var(--font-accent)' : 'var(--font-display)',
-      fontWeight: isLevel ? 400 : 900,
-      fontSize: isLevel ? '145%' : undefined,
-      position: isLevel ? 'relative' : undefined,
+      fontFamily: 'var(--font-display)',
+      fontWeight: 900,
+      position: isLastWord ? 'relative' : undefined,
       opacity: 0,
       willChange: 'transform, opacity',
     }
@@ -444,7 +421,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
         style={wordStyle}
       >
         {word.text}
-        {isLevel && (
+        {isLastWord && (
           <span
             ref={levelUnderlineRef}
             style={{
@@ -468,7 +445,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       style={{
         display: 'flex',
         justifyContent: 'center',
-        gap: '8px',
+        gap: '10px',
         flexWrap: 'wrap',
       }}
     >
@@ -483,9 +460,9 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '5px 10px 5px 6px',
-              borderRadius: '6px',
+              gap: '8px',
+              padding: '7px 14px 7px 8px',
+              borderRadius: '10px',
               background: `${brand.color}0D`,
               border: `1px solid ${brand.color}1A`,
               opacity: 0,
@@ -498,9 +475,9 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
             <img
               src={`https://www.google.com/s2/favicons?domain=${brand.domain}&sz=128`}
               alt=""
-              width={16}
-              height={16}
-              style={{ borderRadius: '3px', display: 'block' }}
+              width={32}
+              height={32}
+              style={{ borderRadius: '4px', display: 'block' }}
               loading="eager"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
@@ -508,7 +485,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
               style={{
                 fontFamily: 'var(--font-display)',
                 fontWeight: 700,
-                fontSize: '11px',
+                fontSize: '14px',
                 letterSpacing: '0.02em',
                 color: brand.color,
                 lineHeight: 1,
@@ -546,7 +523,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       {/* Global keyframes */}
       <style>{KEYFRAMES_CSS}</style>
 
-      {/* ═══════ PHASE 1: Statement + Brands ═══════ */}
+      {/* ═══════ PHASE 1 container: text + brands ═══════ */}
       <div
         ref={phase1Ref}
         style={{
@@ -559,187 +536,199 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
           willChange: 'opacity, transform',
         }}
       >
-        {/* Word container - 2 rows */}
+        {/* Iron Media logo group — appears ABOVE text in phase 2 */}
         <div
+          ref={logoGroupRef}
           style={{
-            textAlign: 'center',
-            fontSize: baseFontSize,
-            lineHeight: 1.3,
-            letterSpacing: '-0.02em',
-            color: COLORS.textDark,
-          }}
-        >
-          {/* Row 1: "We scale Ecom Brands" */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'baseline',
-              gap: '0.25em',
-              flexWrap: 'wrap',
-            }}
-          >
-            {row1Words.map((word) => {
-              const globalIndex = PHASE1_WORDS.indexOf(word)
-              return renderWord(word, globalIndex)
-            })}
-          </div>
-
-          {/* Row 2: "aufs nächste Level" */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'baseline',
-              gap: '0.25em',
-              flexWrap: 'wrap',
-              marginTop: '0.1em',
-            }}
-          >
-            {row2Words.map((word) => {
-              const globalIndex = PHASE1_WORDS.indexOf(word)
-              return renderWord(word, globalIndex)
-            })}
-          </div>
-        </div>
-
-        {/* Brand logos - 2 rows of 6 */}
-        <div
-          style={{
-            maxWidth: '750px',
-            width: '100%',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '8px',
-            marginTop: '28px',
-          }}
-        >
-          {renderBrandRow(brandsRow1, 0)}
-          {renderBrandRow(brandsRow2, 6)}
-        </div>
-      </div>
-
-      {/* ═══════ PHASE 2 & 3: Logo Entrance + Blur Dissolve ═══════ */}
-      <div
-        ref={phase2Ref}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px',
-          willChange: 'opacity, transform',
-        }}
-      >
-        {/* Bars container */}
-        <div
-          ref={barsGroupRef}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
             gap: '10px',
-            willChange: 'transform, opacity',
+            marginBottom: '32px',
+            willChange: 'opacity, transform',
           }}
         >
-          {/* Bar 1 - Sky Blue */}
+          {/* Bars container */}
           <div
-            ref={bar1Ref}
+            ref={barsGroupRef}
             style={{
-              width: '22px',
-              height: '120px',
-              backgroundColor: COLORS.skyBlue,
-              borderRadius: '999px',
-              transformOrigin: 'center bottom',
-              willChange: 'transform, opacity, filter',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              willChange: 'transform, opacity',
             }}
-          />
-          {/* Bar 2 - Ocean Blue, tallest */}
+          >
+            {/* Bar 1 - Sky Blue */}
+            <div
+              ref={bar1Ref}
+              style={{
+                width: '18px',
+                height: '90px',
+                backgroundColor: COLORS.skyBlue,
+                borderRadius: '999px',
+                transformOrigin: 'center bottom',
+                willChange: 'transform, opacity, filter',
+              }}
+            />
+            {/* Bar 2 - Ocean Blue, tallest */}
+            <div
+              ref={bar2Ref}
+              style={{
+                width: '18px',
+                height: '124px',
+                backgroundColor: COLORS.oceanBlue,
+                borderRadius: '999px',
+                transformOrigin: 'center bottom',
+                willChange: 'transform, opacity, filter',
+              }}
+            />
+            {/* Bar 3 - Deep Teal */}
+            <div
+              ref={bar3Ref}
+              style={{
+                width: '18px',
+                height: '100px',
+                backgroundColor: COLORS.deepTeal,
+                borderRadius: '999px',
+                transformOrigin: 'center bottom',
+                willChange: 'transform, opacity, filter',
+              }}
+            />
+          </div>
+
+          {/* IRON text */}
           <div
-            ref={bar2Ref}
+            ref={ironContainerRef}
             style={{
-              width: '22px',
-              height: '164px',
-              backgroundColor: COLORS.oceanBlue,
-              borderRadius: '999px',
-              transformOrigin: 'center bottom',
-              willChange: 'transform, opacity, filter',
+              display: 'flex',
+              gap: '0.06em',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              color: COLORS.textDark,
+              fontSize: 'clamp(20px, 3.2vw, 38px)',
+              lineHeight: 1,
+              willChange: 'opacity',
             }}
-          />
-          {/* Bar 3 - Deep Teal */}
+          >
+            {IRON_LETTERS.map((letter, i) => (
+              <span
+                key={`iron-${i}`}
+                ref={(el) => {
+                  ironLetterRefs.current[i] = el
+                }}
+                style={{
+                  display: 'inline-block',
+                  willChange: 'transform, opacity',
+                }}
+              >
+                {letter}
+              </span>
+            ))}
+          </div>
+
+          {/* MEDIA text */}
           <div
-            ref={bar3Ref}
+            ref={mediaRef}
             style={{
-              width: '22px',
-              height: '132px',
-              backgroundColor: COLORS.deepTeal,
-              borderRadius: '999px',
-              transformOrigin: 'center bottom',
-              willChange: 'transform, opacity, filter',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 300,
+              color: COLORS.textMuted,
+              fontSize: 'clamp(11px, 1.8vw, 20px)',
+              textTransform: 'uppercase',
+              lineHeight: 1,
+              willChange: 'opacity, letter-spacing',
+              marginTop: '-6px',
+            }}
+          >
+            MEDIA
+          </div>
+
+          {/* Radial pulse div (for outro) */}
+          <div
+            ref={radialPulseRef}
+            style={{
+              position: 'absolute',
+              width: '250px',
+              height: '250px',
+              borderRadius: '50%',
+              background: `radial-gradient(circle, rgba(46,154,196,0.15), transparent 70%)`,
+              pointerEvents: 'none',
+              opacity: 0,
+              willChange: 'transform, opacity',
             }}
           />
         </div>
 
-        {/* IRON text */}
+        {/* Text block — shifts down in phase 2 */}
         <div
-          ref={ironContainerRef}
+          ref={textBlockRef}
           style={{
             display: 'flex',
-            gap: '0.06em',
-            fontFamily: 'var(--font-display)',
-            fontWeight: 800,
-            color: COLORS.textDark,
-            fontSize: 'clamp(24px, 4vw, 48px)',
-            lineHeight: 1,
-            willChange: 'opacity',
+            flexDirection: 'column',
+            alignItems: 'center',
+            willChange: 'transform',
           }}
         >
-          {IRON_LETTERS.map((letter, i) => (
-            <span
-              key={`iron-${i}`}
-              ref={(el) => {
-                ironLetterRefs.current[i] = el
-              }}
+          {/* Word container - 2 rows */}
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: baseFontSize,
+              lineHeight: 1.3,
+              letterSpacing: '-0.02em',
+              color: COLORS.textDark,
+            }}
+          >
+            {/* Row 1: "We scale Ecom brands" */}
+            <div
               style={{
-                display: 'inline-block',
-                willChange: 'transform, opacity',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'baseline',
+                gap: '0.25em',
+                flexWrap: 'wrap',
               }}
             >
-              {letter}
-            </span>
-          ))}
-        </div>
+              {row1Words.map((word) => {
+                const globalIndex = PHASE1_WORDS.indexOf(word)
+                return renderWord(word, globalIndex)
+              })}
+            </div>
 
-        {/* MEDIA text */}
-        <div
-          ref={mediaRef}
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 300,
-            color: COLORS.textMuted,
-            fontSize: 'clamp(13px, 2.2vw, 26px)',
-            textTransform: 'uppercase',
-            lineHeight: 1,
-            willChange: 'opacity, letter-spacing',
-            marginTop: '-8px',
-          }}
-        >
-          MEDIA
-        </div>
+            {/* Row 2: "to the next level" */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'baseline',
+                gap: '0.25em',
+                flexWrap: 'wrap',
+                marginTop: '0.1em',
+              }}
+            >
+              {row2Words.map((word) => {
+                const globalIndex = PHASE1_WORDS.indexOf(word)
+                return renderWord(word, globalIndex)
+              })}
+            </div>
+          </div>
 
-        {/* Radial pulse div (for outro) */}
-        <div
-          ref={radialPulseRef}
-          style={{
-            position: 'absolute',
-            width: '300px',
-            height: '300px',
-            borderRadius: '50%',
-            background: `radial-gradient(circle, rgba(46,154,196,0.15), transparent 70%)`,
-            pointerEvents: 'none',
-            opacity: 0,
-            willChange: 'transform, opacity',
-          }}
-        />
+          {/* Brand logos - 2 rows of 6 */}
+          <div
+            style={{
+              maxWidth: '850px',
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+              marginTop: '28px',
+            }}
+          >
+            {renderBrandRow(brandsRow1, 0)}
+            {renderBrandRow(brandsRow2, 6)}
+          </div>
+        </div>
       </div>
     </div>
   )

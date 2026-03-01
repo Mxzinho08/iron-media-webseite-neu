@@ -8,11 +8,9 @@ import {
   CaseVisual5,
   CaseVisual6,
 } from '@/components/case-studies/CaseVisuals'
-import TestimonialMarquee from '@/components/case-studies/TestimonialMarquee'
-import MediaAppearances from '@/components/case-studies/MediaAppearances'
 import ScrollReveal from '@/components/ui/ScrollReveal'
 import AnimatedCounter from '@/components/ui/AnimatedCounter'
-import { AGGREGATE_METRICS, CASE_STUDIES, AWARDS } from '@/lib/constants'
+import { AGGREGATE_METRICS, CASE_STUDIES } from '@/lib/constants'
 import { ReactNode } from 'react'
 
 /* ─── Visual component map ─── */
@@ -25,42 +23,6 @@ const CASE_VISUALS: Record<number, ReactNode> = {
   6: <CaseVisual6 />,
 }
 
-/* ─── Award icon SVGs ─── */
-function AwardIcon({ icon }: { icon: string }) {
-  const shared = 'w-10 h-10 stroke-[#2E9AC4]'
-  switch (icon) {
-    case 'trophy':
-      return (
-        <svg className={shared} viewBox="0 0 24 24" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-          <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-          <path d="M4 22h16" />
-          <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22" />
-          <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22" />
-          <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-        </svg>
-      )
-    case 'globe':
-      return (
-        <svg className={shared} viewBox="0 0 24 24" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
-          <path d="M2 12h20" />
-        </svg>
-      )
-    case 'mic':
-      return (
-        <svg className={shared} viewBox="0 0 24 24" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-          <line x1="12" x2="12" y1="19" y2="22" />
-        </svg>
-      )
-    default:
-      return null
-  }
-}
-
 /* ═══════════════════════════════════════════
    CASE STUDIES  — Main Section Component
    ═══════════════════════════════════════════ */
@@ -70,29 +32,43 @@ export default function CaseStudies() {
       id="cases"
       className="relative w-full overflow-hidden"
       style={{
-        background:
-          'linear-gradient(180deg, #FFFFFF 0%, #0A0E17 5%, #0A0E17 95%, #FFFFFF 100%)',
+        background: '#FFFFFF',
       }}
     >
-      {/* ── Star-like dots overlay ── */}
+      {/* ── Subtle ascending bars background (decorative) ── */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            'radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.15) 1px, transparent 0), ' +
-            'radial-gradient(1px 1px at 30% 65%, rgba(255,255,255,0.1) 1px, transparent 0), ' +
-            'radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,0.12) 1px, transparent 0), ' +
-            'radial-gradient(1px 1px at 70% 45%, rgba(255,255,255,0.08) 1px, transparent 0), ' +
-            'radial-gradient(1px 1px at 85% 80%, rgba(255,255,255,0.1) 1px, transparent 0), ' +
-            'radial-gradient(1px 1px at 20% 90%, rgba(255,255,255,0.07) 1px, transparent 0), ' +
-            'radial-gradient(1px 1px at 45% 40%, rgba(255,255,255,0.09) 1px, transparent 0), ' +
-            'radial-gradient(1px 1px at 90% 10%, rgba(255,255,255,0.11) 1px, transparent 0), ' +
-            'radial-gradient(1px 1px at 60% 75%, rgba(255,255,255,0.06) 1px, transparent 0), ' +
-            'radial-gradient(1px 1px at 5% 55%, rgba(255,255,255,0.08) 1px, transparent 0)',
-          backgroundSize: '100% 100%',
-        }}
-      />
+        style={{ overflow: 'hidden' }}
+      >
+        {[0.15, 0.3, 0.45, 0.6, 0.75, 0.88].map((left, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: `${left * 100}%`,
+              bottom: 0,
+              width: '1px',
+              height: `${30 + i * 12}%`,
+              background: `linear-gradient(to top, rgba(46,154,196,0.03), transparent)`,
+            }}
+          />
+        ))}
+        {[0.2, 0.4, 0.6, 0.8].map((left, i) => (
+          <div
+            key={`bar-${i}`}
+            style={{
+              position: 'absolute',
+              left: `${left * 100 - 2}%`,
+              bottom: 0,
+              width: '40px',
+              height: `${20 + i * 15}%`,
+              background: `linear-gradient(to top, rgba(46,154,196,0.015), transparent)`,
+              borderRadius: '4px 4px 0 0',
+            }}
+          />
+        ))}
+      </div>
 
       {/* Content wrapper */}
       <div className="relative z-10 py-[clamp(80px,12vh,160px)]">
@@ -121,21 +97,12 @@ export default function CaseStudies() {
                 fontFamily: 'var(--font-headline)',
                 fontWeight: 800,
                 fontSize: 'clamp(40px, 5vw, 72px)',
-                color: '#FFFFFF',
+                color: '#1A1A2E',
                 letterSpacing: '-0.03em',
                 lineHeight: 1.1,
               }}
             >
-              Ergebnisse, die f&uuml;r sich{' '}
-              <span
-                style={{
-                  fontFamily: 'var(--font-accent)',
-                  fontSize: '110%',
-                  color: '#56B8DE',
-                }}
-              >
-                sprechen
-              </span>
+              Ergebnisse, die f&uuml;r sich sprechen
             </h2>
 
             {/* Subline */}
@@ -143,7 +110,7 @@ export default function CaseStudies() {
               className="mx-auto mt-6"
               style={{
                 fontSize: '17px',
-                color: 'rgba(255,255,255,0.6)',
+                color: '#4A5568',
                 maxWidth: '700px',
                 lineHeight: 1.7,
               }}
@@ -159,28 +126,24 @@ export default function CaseStudies() {
             2. AGGREGATE METRICS ROW
             ═══════════════════════════════════ */}
         <div className="max-w-[1440px] mx-auto px-[clamp(24px,5vw,80px)] mb-[clamp(64px,8vw,120px)]">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-[2px]">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {AGGREGATE_METRICS.map((m, i) => (
               <ScrollReveal key={m.label} delay={i * 0.1}>
                 <div
-                  className="relative text-center p-10"
+                  className="relative text-center p-10 rounded-2xl"
                   style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(46,154,196,0.08)',
+                    background: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
                   }}
                 >
-                  {/* Top glow line */}
+                  {/* Value with blue gradient text */}
                   <div
-                    aria-hidden="true"
-                    className="absolute top-0 left-[20%] right-[20%] h-px"
                     style={{
-                      background:
-                        'linear-gradient(to right, transparent, #2E9AC4, transparent)',
+                      background: 'linear-gradient(180deg, #1B7EA6 0%, #56B8DE 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
                     }}
-                  />
-
-                  {/* Value */}
-                  <div className="text-gradient-white-blue">
+                  >
                     <AnimatedCounter
                       end={m.value}
                       prefix={m.prefix}
@@ -203,7 +166,7 @@ export default function CaseStudies() {
                       fontSize: '10px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.18em',
-                      color: 'rgba(255,255,255,0.4)',
+                      color: '#94A3B8',
                     }}
                   >
                     {m.label}
@@ -263,7 +226,7 @@ export default function CaseStudies() {
                         fontFamily: 'var(--font-headline)',
                         fontWeight: 800,
                         fontSize: 'clamp(28px, 3.5vw, 48px)',
-                        color: '#FFFFFF',
+                        color: '#1A1A2E',
                         lineHeight: 1.1,
                         letterSpacing: '-0.03em',
                       }}
@@ -277,7 +240,7 @@ export default function CaseStudies() {
                       style={{
                         fontFamily: 'var(--font-mono)',
                         fontSize: '13px',
-                        color: 'rgba(255,255,255,0.45)',
+                        color: '#94A3B8',
                         letterSpacing: '0.05em',
                       }}
                     >
@@ -290,15 +253,13 @@ export default function CaseStudies() {
                       style={{
                         fontStyle: 'italic',
                         fontSize: '20px',
-                        color: 'rgba(255,255,255,0.7)',
+                        color: '#4A5568',
                       }}
                     >
                       {cs.accentPhrase}{' '}
                       <span
                         style={{
-                          fontFamily: 'var(--font-accent)',
-                          fontSize: '110%',
-                          color: '#56B8DE',
+                          color: '#2E9AC4',
                         }}
                       >
                         {cs.accentWord}
@@ -311,7 +272,7 @@ export default function CaseStudies() {
                       style={{
                         fontSize: '15px',
                         lineHeight: 1.7,
-                        color: 'rgba(255,255,255,0.65)',
+                        color: '#4A5568',
                         maxWidth: '480px',
                       }}
                     >
@@ -327,7 +288,7 @@ export default function CaseStudies() {
                           fontStyle: 'italic',
                           fontSize: '14px',
                           lineHeight: 1.7,
-                          color: 'rgba(255,255,255,0.6)',
+                          color: '#64748B',
                           maxWidth: '480px',
                         }}
                       >
@@ -337,7 +298,7 @@ export default function CaseStudies() {
                           style={{
                             fontStyle: 'normal',
                             fontSize: '12px',
-                            color: 'rgba(255,255,255,0.4)',
+                            color: '#94A3B8',
                           }}
                         >
                           &mdash; {(cs as typeof CASE_STUDIES[4]).quote!.author},{' '}
@@ -351,10 +312,11 @@ export default function CaseStudies() {
                       {cs.metrics.map((metric) => (
                         <div
                           key={metric.label}
-                          className="flex flex-col p-4 px-5 rounded-xl"
+                          className="flex flex-col p-4 px-5"
                           style={{
-                            background: 'rgba(46,154,196,0.06)',
-                            border: '1px solid rgba(46,154,196,0.1)',
+                            background: '#F1F8FC',
+                            border: '1px solid rgba(46,154,196,0.15)',
+                            borderRadius: '14px',
                             minWidth: '100px',
                           }}
                         >
@@ -363,7 +325,7 @@ export default function CaseStudies() {
                               fontFamily: 'var(--font-display)',
                               fontWeight: 800,
                               fontSize: '24px',
-                              color: '#FFFFFF',
+                              color: '#1A1A2E',
                             }}
                           >
                             {metric.value}
@@ -375,7 +337,7 @@ export default function CaseStudies() {
                               fontSize: '9px',
                               letterSpacing: '0.15em',
                               textTransform: 'uppercase',
-                              color: 'rgba(255,255,255,0.35)',
+                              color: '#94A3B8',
                             }}
                           >
                             {metric.label}
@@ -391,31 +353,11 @@ export default function CaseStudies() {
                       className="relative w-full overflow-hidden flex items-center justify-center"
                       style={{
                         aspectRatio: '4/3',
-                        borderRadius: '16px',
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(46,154,196,0.08)',
+                        borderRadius: '24px',
+                        background: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
                       }}
                     >
-                      {/* Top glow line */}
-                      <div
-                        aria-hidden="true"
-                        className="absolute top-0 left-[15%] right-[15%] h-px z-10"
-                        style={{
-                          background:
-                            'linear-gradient(to right, transparent, #2E9AC4, transparent)',
-                        }}
-                      />
-
-                      {/* Inner radial glow */}
-                      <div
-                        aria-hidden="true"
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                          background:
-                            'radial-gradient(ellipse at 50% 30%, rgba(46,154,196,0.05) 0%, transparent 70%)',
-                        }}
-                      />
-
                       {/* Visual component */}
                       <div className="relative z-10 w-full h-full flex items-center justify-center">
                         {CASE_VISUALS[cs.id]}
@@ -427,152 +369,6 @@ export default function CaseStudies() {
             </ScrollReveal>
           )
         })}
-
-        {/* ═══════════════════════════════════
-            4. TESTIMONIAL MARQUEE
-            ═══════════════════════════════════ */}
-        <ScrollReveal>
-          <div className="py-[clamp(48px,6vw,96px)]">
-            <TestimonialMarquee />
-          </div>
-        </ScrollReveal>
-
-        {/* ═══════════════════════════════════
-            5. MEDIA APPEARANCES
-            ═══════════════════════════════════ */}
-        <ScrollReveal>
-          <div className="max-w-[1440px] mx-auto px-[clamp(24px,5vw,80px)] py-[clamp(48px,6vw,96px)]">
-            <MediaAppearances />
-          </div>
-        </ScrollReveal>
-
-        {/* ═══════════════════════════════════
-            6. AWARDS ROW
-            ═══════════════════════════════════ */}
-        <div className="max-w-[1200px] mx-auto px-[clamp(24px,5vw,80px)] py-[clamp(48px,6vw,96px)]">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {AWARDS.map((award, i) => (
-              <ScrollReveal key={award.title} delay={i * 0.15}>
-                <div
-                  className="p-8 rounded-2xl text-center"
-                  style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(46,154,196,0.08)',
-                  }}
-                >
-                  <div className="flex justify-center">
-                    <AwardIcon icon={award.icon} />
-                  </div>
-                  <h4
-                    className="mt-4"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontWeight: 700,
-                      fontSize: '18px',
-                      color: '#FFFFFF',
-                    }}
-                  >
-                    {award.title}
-                  </h4>
-                  <p
-                    className="mt-2"
-                    style={{
-                      fontSize: '14px',
-                      color: 'rgba(255,255,255,0.5)',
-                    }}
-                  >
-                    {award.description}
-                  </p>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-
-        {/* ═══════════════════════════════════
-            7. SECTION CTA
-            ═══════════════════════════════════ */}
-        <ScrollReveal>
-          <div
-            className="text-center mx-auto mt-24 px-[clamp(24px,5vw,80px)] pb-[clamp(48px,6vw,96px)]"
-            style={{ maxWidth: '600px' }}
-          >
-            {/* Tagline */}
-            <p
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '10px',
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                color: '#2E9AC4',
-              }}
-            >
-              BEREIT F&Uuml;R DEIN N&Auml;CHSTES KAPITEL?
-            </p>
-
-            {/* Headline */}
-            <h3
-              className="mt-6"
-              style={{
-                fontFamily: 'var(--font-headline)',
-                fontWeight: 800,
-                fontSize: 'clamp(32px, 4vw, 56px)',
-                color: '#FFFFFF',
-                lineHeight: 1.15,
-                letterSpacing: '-0.03em',
-              }}
-            >
-              Lass uns &uuml;ber{' '}
-              <span
-                style={{
-                  fontFamily: 'var(--font-accent)',
-                  fontSize: '115%',
-                  color: '#56B8DE',
-                }}
-              >
-                dein Wachstum
-              </span>{' '}
-              sprechen.
-            </h3>
-
-            {/* CTA Button */}
-            <a
-              href="#contact"
-              className="group inline-flex items-center gap-3 mt-8 px-8 py-4 rounded-full transition-all duration-300"
-              style={{
-                background: '#FFFFFF',
-                color: '#0A0E17',
-                fontFamily: 'var(--font-display)',
-                fontWeight: 700,
-                fontSize: '15px',
-              }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget
-                el.style.background =
-                  'linear-gradient(to right, #56B8DE, #2E9AC4, #1B7EA6)'
-                el.style.color = '#FFFFFF'
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget
-                el.style.background = '#FFFFFF'
-                el.style.color = '#0A0E17'
-              }}
-            >
-              Jetzt Termin sichern
-              <svg
-                className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 8h10M9 4l4 4-4 4" />
-              </svg>
-            </a>
-          </div>
-        </ScrollReveal>
       </div>
     </section>
   )

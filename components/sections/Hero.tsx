@@ -2,281 +2,512 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { HERO_METRICS } from '@/lib/constants'
+import { HERO_METRICS, TRUSTED_LOGOS } from '@/lib/constants'
 
 /* ============================================
-   IRON MEDIA — HERO v6
-   Centered layout, fullscreen GLSL liquid glass
-   16 floating SDF logo groups, no mouse interaction
+   IRON MEDIA — HERO v7
+   Scaling Dashboard: Canvas chart + floating
+   notification bubbles + glassmorphism card
    ============================================ */
-
-interface HeroProps {
-  introComplete: boolean
-}
 
 const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1]
 
-/* ============================================
-   VERTEX SHADER
-   ============================================ */
-const VERTEX_SHADER = `
-varying vec2 vUv;
-void main() {
-  vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`
+const NOTIFICATION_BUBBLES = [
+  { text: '+142 Sales', subtext: 'Today', color: '#5CBB5C' },
+  { text: '+€12,847', subtext: 'Revenue today', color: '#2E9AC4' },
+  { text: '↑ 34%', subtext: 'vs. last month', color: '#5CBB5C' },
+  { text: 'New Order', subtext: '€289.00', color: '#2E9AC4' },
+  { text: '+87', subtext: 'New Customers', color: '#56B8DE' },
+  { text: '4.9', subtext: 'Store Rating', color: '#F5A623' },
+  { text: '€1.2M', subtext: 'Monthly Revenue', color: '#5CBB5C' },
+  { text: 'ROAS 4.2x', subtext: 'Meta Ads', color: '#2E9AC4' },
+  { text: '68%', subtext: 'Repeat Rate', color: '#1B7EA6' },
+  { text: 'CPA €12', subtext: '↓ 23% optimiert', color: '#5CBB5C' },
+  { text: '+3 Märkte', subtext: 'Expandiert', color: '#56B8DE' },
+  { text: '€340K', subtext: 'Ad Spend/Mo', color: '#1877F2' },
+  { text: 'ROAS 5.1x', subtext: 'Google Ads', color: '#34A853' },
+  { text: '+2.1M', subtext: 'Views/Week', color: '#1A1A2E' },
+]
 
 /* ============================================
-   FRAGMENT SHADER — Liquid Glass Logo Groups
-   Ultra-cheap: 1 global distortion, 16 groups x 3 bars
-   No per-bar distortion, no fresnel, no specular
-   ============================================ */
-const FRAGMENT_SHADER = `
-precision mediump float;
-varying vec2 vUv;
-uniform float uTime;
-uniform vec2 uResolution;
-
-float rrect(vec2 p, vec2 h, float r) {
-  vec2 d = abs(p) - h + r;
-  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
-}
-
-vec4 logoGroup(vec2 uv, vec2 pos, float sc, float rot, float intensity, float time) {
-  vec2 p = uv - pos;
-  float c = cos(rot), s = sin(rot);
-  p = mat2(c, -s, s, c) * p;
-  p /= sc;
-
-  // Liquid distortion — organic flowing edges
-  p.x += sin(p.y * 100.0 + time * 0.7) * 0.0005;
-  p.y += cos(p.x * 80.0 + time * 0.5) * 0.0005;
-
-  float bw = 0.007, gap = 0.004, r = bw * 0.5;
-  vec3 col1 = vec3(0.337, 0.722, 0.871); // sky-blue
-  vec3 col2 = vec3(0.180, 0.604, 0.769); // ocean-blue
-  vec3 col3 = vec3(0.106, 0.494, 0.651); // deep-teal
-  float x1 = -(bw + gap), x3 = bw + gap;
-
-  vec4 result = vec4(0.0);
-
-  // Bar 1
-  float d1 = rrect(p - vec2(x1, 0.0), vec2(bw*0.5, 0.014), r);
-  float f1 = smoothstep(0.001, -0.001, d1);
-  if (f1 > 0.0) {
-    float bright = mix(0.75, 1.15, smoothstep(-bw*0.5, bw*0.5, p.x - x1));
-    result = vec4(col1 * bright * intensity, f1 * 0.7 * intensity);
-  }
-  float edge1 = smoothstep(0.002, 0.0, abs(d1)) * 0.35 * intensity;
-  result.rgb += col1 * edge1; result.a = max(result.a, edge1);
-
-  // Bar 2 (tallest)
-  float d2 = rrect(p, vec2(bw*0.5, 0.020), r);
-  float f2 = smoothstep(0.001, -0.001, d2);
-  if (f2 > 0.0) {
-    float bright = mix(0.75, 1.15, smoothstep(-bw*0.5, bw*0.5, p.x));
-    vec4 b2 = vec4(col2 * bright * intensity, f2 * 0.75 * intensity);
-    result.rgb = mix(result.rgb, b2.rgb, b2.a); result.a = max(result.a, b2.a);
-  }
-  float edge2 = smoothstep(0.002, 0.0, abs(d2)) * 0.35 * intensity;
-  result.rgb += col2 * edge2; result.a = max(result.a, edge2);
-
-  // Bar 3
-  float d3 = rrect(p - vec2(x3, 0.0), vec2(bw*0.5, 0.016), r);
-  float f3 = smoothstep(0.001, -0.001, d3);
-  if (f3 > 0.0) {
-    float bright = mix(0.75, 1.15, smoothstep(-bw*0.5, bw*0.5, p.x - x3));
-    vec4 b3 = vec4(col3 * bright * intensity, f3 * 0.65 * intensity);
-    result.rgb = mix(result.rgb, b3.rgb, b3.a); result.a = max(result.a, b3.a);
-  }
-  float edge3 = smoothstep(0.002, 0.0, abs(d3)) * 0.35 * intensity;
-  result.rgb += col3 * edge3; result.a = max(result.a, edge3);
-
-  return result;
-}
-
-void main() {
-  vec2 uv = vUv;
-  float aspect = uResolution.x / uResolution.y;
-  vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
-
-  // Single global liquid distortion (applied to all groups)
-  vec2 globalDistort = vec2(
-    sin(uv.y * 5.0 + uTime * 0.25) * 0.002 + sin(uv.y * 2.0 + uTime * 0.12) * 0.003,
-    cos(uv.x * 4.0 + uTime * 0.20) * 0.002 + cos(uv.x * 1.8 + uTime * 0.10) * 0.003
-  );
-  p += globalDistort;
-
-  // Subtle blue grid background
-  float gridX = smoothstep(0.0, 0.001, abs(mod(uv.x * 40.0, 1.0) - 0.5) - 0.495);
-  float gridY = smoothstep(0.0, 0.001, abs(mod(uv.y * 40.0, 1.0) - 0.5) - 0.495);
-  float grid = min(gridX, gridY);
-  vec3 finalColor = mix(vec3(1.0), vec3(0.92, 0.96, 1.0), (1.0 - grid) * 0.08);
-
-  // 24 floating logo groups — hex-grid layout, fill entire viewport
-  vec2 positions[24];
-  float scales[24];
-  float glows[24];
-
-  positions[0]=vec2(-0.40, 0.42); scales[0]=0.80; glows[0]=0.38;
-  positions[1]=vec2(-0.15, 0.40); scales[1]=1.15; glows[1]=0.55;
-  positions[2]=vec2( 0.12, 0.43); scales[2]=0.90; glows[2]=0.42;
-  positions[3]=vec2( 0.38, 0.41); scales[3]=1.05; glows[3]=0.50;
-  positions[4]=vec2(-0.48, 0.24); scales[4]=0.70; glows[4]=0.32;
-  positions[5]=vec2(-0.24, 0.22); scales[5]=1.50; glows[5]=0.75;
-  positions[6]=vec2( 0.02, 0.25); scales[6]=1.25; glows[6]=0.65;
-  positions[7]=vec2( 0.28, 0.23); scales[7]=1.60; glows[7]=0.82;
-  positions[8]=vec2( 0.50, 0.20); scales[8]=0.72; glows[8]=0.34;
-  positions[9]=vec2(-0.44, 0.04); scales[9]=0.95; glows[9]=0.48;
-  positions[10]=vec2(-0.18, 0.02); scales[10]=1.85; glows[10]=0.92;
-  positions[11]=vec2( 0.14,-0.01); scales[11]=1.70; glows[11]=0.88;
-  positions[12]=vec2( 0.42, 0.03); scales[12]=1.10; glows[12]=0.55;
-  positions[13]=vec2(-0.50,-0.18); scales[13]=0.68; glows[13]=0.30;
-  positions[14]=vec2(-0.26,-0.20); scales[14]=1.45; glows[14]=0.72;
-  positions[15]=vec2( 0.00,-0.17); scales[15]=1.30; glows[15]=0.68;
-  positions[16]=vec2( 0.26,-0.19); scales[16]=1.55; glows[16]=0.78;
-  positions[17]=vec2( 0.50,-0.16); scales[17]=0.72; glows[17]=0.34;
-  positions[18]=vec2(-0.42,-0.40); scales[18]=0.78; glows[18]=0.36;
-  positions[19]=vec2(-0.16,-0.42); scales[19]=1.10; glows[19]=0.52;
-  positions[20]=vec2( 0.10,-0.39); scales[20]=0.92; glows[20]=0.44;
-  positions[21]=vec2( 0.38,-0.41); scales[21]=1.00; glows[21]=0.48;
-  positions[22]=vec2(-0.34, 0.32); scales[22]=0.85; glows[22]=0.40;
-  positions[23]=vec2( 0.34,-0.30); scales[23]=0.88; glows[23]=0.42;
-
-  for (int i = 23; i >= 0; i--) {
-    float fi = float(i);
-    float t = uTime * (0.03 + fi * 0.0012);
-    vec2 moveOff = vec2(
-      sin(t * 1.1 + fi * 1.7) * 0.045 + sin(t * 0.4 + fi * 0.9) * 0.02,
-      cos(t * 0.9 + fi * 2.3) * 0.04 + cos(t * 0.3 + fi * 1.3) * 0.018
-    );
-    vec2 pos = positions[i] + moveOff;
-    float cull = scales[i] * 0.045;
-    if (abs(p.x - pos.x) < cull && abs(p.y - pos.y) < cull) {
-      float rot = uTime * 0.03 * (1.0 - 2.0 * mod(fi, 2.0));
-      vec4 group = logoGroup(p, pos, scales[i], rot, glows[i], uTime);
-      finalColor = mix(finalColor, group.rgb, group.a * 0.9);
-    }
-  }
-
-  gl_FragColor = vec4(finalColor, 1.0);
-}
-`
-
-/* ============================================
-   LIQUID GLASS — Three.js Shader Canvas
-   No mouse interaction, autonomous Lissajous motion
+   SCALING CHART — Canvas 2D Revenue Chart
    ============================================ */
 
-function LiquidGlassCanvas({ show }: { show: boolean }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const disposedRef = useRef(false)
+function roundedTopRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  ctx.beginPath()
+  ctx.moveTo(x, y + h)
+  ctx.lineTo(x, y + r)
+  ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+  ctx.lineTo(x + w, y + h)
+  ctx.closePath()
+}
+
+function ScalingChart({ show }: { show: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const animationRef = useRef<number>(0)
+  const startTimeRef = useRef<number>(0)
+  const dataPointsRef = useRef<number[]>([])
+  const hasStartedRef = useRef(false)
 
   useEffect(() => {
-    if (!containerRef.current || !show) return
-    disposedRef.current = false
+    if (!show || hasStartedRef.current) return
+    hasStartedRef.current = true
 
-    let renderer: any
-    let animationId: number
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    // Generate 24 data points with exponential growth + sine noise
+    const points: number[] = []
+    for (let i = 0; i < 24; i++) {
+      const t = i / 23
+      const base = Math.pow(t, 1.8) * 0.7 + t * 0.3
+      const noise = Math.sin(i * 1.3) * 0.03 + Math.sin(i * 2.7) * 0.02
+      points.push(Math.max(0, Math.min(1, base + noise)))
+    }
+    dataPointsRef.current = points
+
+    startTimeRef.current = performance.now()
+
     let resizeTimeout: ReturnType<typeof setTimeout>
 
-    const container = containerRef.current
+    const setupCanvas = () => {
+      const dpr = Math.min(window.devicePixelRatio, 2)
+      const w = canvas.offsetWidth
+      const h = canvas.offsetHeight
+      canvas.width = w * dpr
+      canvas.height = h * dpr
+      const ctx = canvas.getContext('2d')
+      if (ctx) ctx.scale(dpr, dpr)
+    }
 
-    const init = async () => {
-      if (disposedRef.current) return
+    setupCanvas()
 
-      const THREE = await import('three')
+    const handleResize = () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(setupCanvas, 200)
+    }
+    window.addEventListener('resize', handleResize)
 
-      if (disposedRef.current) return
+    const draw = (now: number) => {
+      animationRef.current = requestAnimationFrame(draw)
 
-      const width = container.clientWidth
-      const height = container.clientHeight
-      const isMobileDevice = window.innerWidth < 768
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
 
-      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+      const dpr = Math.min(window.devicePixelRatio, 2)
+      const w = canvas.offsetWidth
+      const h = canvas.offsetHeight
 
-      renderer = new THREE.WebGLRenderer({
-        antialias: false,
-        alpha: false,
-        powerPreference: 'high-performance',
-      })
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobileDevice ? 1 : 1.5))
-      renderer.setSize(width, height)
-      renderer.setClearColor(0xFFFFFF, 1)
-      container.appendChild(renderer.domElement)
+      if (w === 0 || h === 0) return
 
-      const scene = new THREE.Scene()
-
-      const uniforms = {
-        uTime: { value: 0.0 },
-        uResolution: { value: new THREE.Vector2(width, height) },
+      // Check if canvas dimensions need updating
+      if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+        canvas.width = w * dpr
+        canvas.height = h * dpr
+        ctx.scale(dpr, dpr)
       }
 
-      const geometry = new THREE.PlaneGeometry(2, 2)
-      const material = new THREE.ShaderMaterial({
-        vertexShader: VERTEX_SHADER,
-        fragmentShader: FRAGMENT_SHADER,
-        uniforms,
-      })
+      const elapsed = now - startTimeRef.current
+      const rawProgress = Math.min(elapsed / 2500, 1)
+      // easeOutQuart: 1 - pow(1-t, 4)
+      const progress = 1 - Math.pow(1 - rawProgress, 4)
 
-      const mesh = new THREE.Mesh(geometry, material)
-      scene.add(mesh)
+      const data = dataPointsRef.current
 
-      // Debounced resize
-      const handleResize = () => {
-        clearTimeout(resizeTimeout)
-        resizeTimeout = setTimeout(() => {
-          if (disposedRef.current || !container) return
-          const w = container.clientWidth
-          const h = container.clientHeight
-          renderer.setSize(w, h)
-          uniforms.uResolution.value.set(w, h)
-        }, 200)
+      // Chart area
+      const chartLeft = w * 0.08
+      const chartRight = w * 0.92
+      const chartTop = h * 0.15
+      const chartBottom = h * 0.78
+      const chartWidth = chartRight - chartLeft
+      const chartHeight = chartBottom - chartTop
+
+      ctx.clearRect(0, 0, w, h)
+
+      // Y-axis labels
+      const yLabels = ['€0', '€250K', '€500K', '€750K', '€1M']
+      ctx.font = '10px "Geist Mono", monospace'
+      ctx.textAlign = 'right'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = 'rgba(148,163,184,0.3)'
+      for (let i = 0; i < yLabels.length; i++) {
+        const y = chartBottom - (i / (yLabels.length - 1)) * chartHeight
+        ctx.fillText(yLabels[i], chartLeft - 8, y)
       }
-      window.addEventListener('resize', handleResize)
 
-      // Animation loop
-      const startTime = performance.now()
-      let lastRender = 0
-      const animate = () => {
-        if (disposedRef.current) return
-        animationId = requestAnimationFrame(animate)
-        const now = performance.now()
-        if (now - lastRender < 33) return
-        lastRender = now
-
-        uniforms.uTime.value = (now - startTime) / 1000
-
-        renderer.render(scene, camera)
+      // Dashed guide lines
+      ctx.strokeStyle = 'rgba(148,163,184,0.06)'
+      ctx.lineWidth = 0.5
+      ctx.setLineDash([4, 4])
+      for (let i = 0; i < yLabels.length; i++) {
+        const y = chartBottom - (i / (yLabels.length - 1)) * chartHeight
+        ctx.beginPath()
+        ctx.moveTo(chartLeft, y)
+        ctx.lineTo(chartRight, y)
+        ctx.stroke()
       }
-      animate()
+      ctx.setLineDash([])
 
-      return () => {
-        window.removeEventListener('resize', handleResize)
-        clearTimeout(resizeTimeout)
-        cancelAnimationFrame(animationId)
-        geometry.dispose()
-        material.dispose()
-        renderer.dispose()
-        if (container.contains(renderer.domElement)) {
-          container.removeChild(renderer.domElement)
+      // Bars
+      const barCount = 24
+      const totalBarSpace = chartWidth
+      const barGap = totalBarSpace * 0.02
+      const barWidth = (totalBarSpace - barGap * (barCount - 1)) / barCount
+
+      for (let i = 0; i < barCount; i++) {
+        const barProgress = Math.max(0, Math.min(1, (progress * 24 - i) / 2))
+        if (barProgress <= 0) continue
+
+        const x = chartLeft + i * (barWidth + barGap)
+        const barH = data[i] * chartHeight * barProgress
+        const barY = chartBottom - barH
+        const radius = Math.min(barWidth * 0.4, 6)
+
+        // Vertical gradient for bar
+        const grad = ctx.createLinearGradient(x, chartBottom, x, barY)
+        grad.addColorStop(0, 'rgba(46,154,196,0.02)')
+        grad.addColorStop(0.5, 'rgba(46,154,196,0.06)')
+        grad.addColorStop(1, 'rgba(46,154,196,0.12)')
+
+        ctx.fillStyle = grad
+        if (barH > radius) {
+          roundedTopRect(ctx, x, barY, barWidth, barH, radius)
+          ctx.fill()
+        } else if (barH > 0) {
+          ctx.fillRect(x, barY, barWidth, barH)
+        }
+      }
+
+      // Growth curve line
+      const visibleCount = Math.floor(progress * 24)
+      if (visibleCount > 0) {
+        const curvePoints: { x: number; y: number }[] = []
+        for (let i = 0; i <= Math.min(visibleCount, 23); i++) {
+          const bp = Math.max(0, Math.min(1, (progress * 24 - i) / 2))
+          const x = chartLeft + i * (barWidth + barGap) + barWidth / 2
+          const barH = data[i] * chartHeight * bp
+          const y = chartBottom - barH
+          curvePoints.push({ x, y })
+        }
+
+        if (curvePoints.length > 1) {
+          // Line
+          ctx.beginPath()
+          ctx.moveTo(curvePoints[0].x, curvePoints[0].y)
+          for (let i = 1; i < curvePoints.length; i++) {
+            ctx.lineTo(curvePoints[i].x, curvePoints[i].y)
+          }
+          ctx.strokeStyle = '#2E9AC4'
+          ctx.lineWidth = 2.5
+          ctx.lineCap = 'round'
+          ctx.lineJoin = 'round'
+          ctx.stroke()
+
+          // Area fill below curve
+          ctx.beginPath()
+          ctx.moveTo(curvePoints[0].x, curvePoints[0].y)
+          for (let i = 1; i < curvePoints.length; i++) {
+            ctx.lineTo(curvePoints[i].x, curvePoints[i].y)
+          }
+          ctx.lineTo(curvePoints[curvePoints.length - 1].x, chartBottom)
+          ctx.lineTo(curvePoints[0].x, chartBottom)
+          ctx.closePath()
+
+          const areaGrad = ctx.createLinearGradient(0, curvePoints[0].y, 0, chartBottom)
+          areaGrad.addColorStop(0, 'rgba(46,154,196,0.08)')
+          areaGrad.addColorStop(1, 'rgba(46,154,196,0.0)')
+          ctx.fillStyle = areaGrad
+          ctx.fill()
+
+          // Glowing end point
+          const lastPt = curvePoints[curvePoints.length - 1]
+          const pulseOpacity = Math.sin(now * 0.003) * 0.15 + 0.3
+
+          // Radial glow
+          const glowGrad = ctx.createRadialGradient(
+            lastPt.x, lastPt.y, 0,
+            lastPt.x, lastPt.y, 20
+          )
+          glowGrad.addColorStop(0, `rgba(46,154,196,${pulseOpacity})`)
+          glowGrad.addColorStop(1, 'rgba(46,154,196,0)')
+          ctx.fillStyle = glowGrad
+          ctx.beginPath()
+          ctx.arc(lastPt.x, lastPt.y, 20, 0, Math.PI * 2)
+          ctx.fill()
+
+          // Solid dot
+          ctx.fillStyle = '#2E9AC4'
+          ctx.beginPath()
+          ctx.arc(lastPt.x, lastPt.y, 4, 0, Math.PI * 2)
+          ctx.fill()
+
+          // White center
+          ctx.fillStyle = '#FFFFFF'
+          ctx.beginPath()
+          ctx.arc(lastPt.x, lastPt.y, 2, 0, Math.PI * 2)
+          ctx.fill()
         }
       }
     }
 
-    let cleanup: (() => void) | undefined
-    init().then((fn) => {
-      cleanup = fn
-    })
+    animationRef.current = requestAnimationFrame(draw)
 
     return () => {
-      disposedRef.current = true
-      cleanup?.()
+      cancelAnimationFrame(animationRef.current)
+      clearTimeout(resizeTimeout)
+      window.removeEventListener('resize', handleResize)
     }
   }, [show])
 
-  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+  return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+}
+
+/* ============================================
+   FLOATING BUBBLES — DOM-animated notifications
+   ============================================ */
+
+const BUBBLE_SIZES: ('sm' | 'md' | 'lg')[] = [
+  'sm', 'md', 'lg', 'md', 'sm', 'lg', 'md', 'sm', 'lg', 'sm', 'md', 'lg', 'sm', 'md',
+]
+
+const BUBBLE_ZONES = [
+  { x: [0.02, 0.22], y: [0.05, 0.35] },   // top-left
+  { x: [0.78, 0.96], y: [0.05, 0.35] },   // top-right
+  { x: [0.02, 0.22], y: [0.65, 0.92] },   // bottom-left
+  { x: [0.78, 0.96], y: [0.65, 0.92] },   // bottom-right
+  { x: [0.25, 0.42], y: [0.02, 0.18] },   // top-center-left
+  { x: [0.58, 0.75], y: [0.02, 0.18] },   // top-center-right
+  { x: [0.25, 0.42], y: [0.82, 0.96] },   // bottom-center-left
+  { x: [0.58, 0.75], y: [0.82, 0.96] },   // bottom-center-right
+]
+
+interface BubbleState {
+  baseX: number
+  baseY: number
+  speedX: number
+  speedY: number
+  phaseX: number
+  phaseY: number
+  amplitudeX: number
+  amplitudeY: number
+  entranceDelay: number
+  visible: boolean
+}
+
+function FloatingBubbles({ show }: { show: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const bubblesRef = useRef<(HTMLDivElement | null)[]>([])
+  const mouseRef = useRef({ x: 0.5, y: 0.5 })
+  const statesRef = useRef<BubbleState[]>([])
+  const animFrameRef = useRef<number>(0)
+  const showTimeRef = useRef<number>(0)
+  const initializedRef = useRef(false)
+
+  useEffect(() => {
+    if (!show || initializedRef.current) return
+    initializedRef.current = true
+    showTimeRef.current = performance.now()
+
+    const container = containerRef.current
+    if (!container) return
+
+    // Mouse tracking
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect()
+      mouseRef.current.x = (e.clientX - rect.left) / rect.width
+      mouseRef.current.y = (e.clientY - rect.top) / rect.height
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+
+    // Initialize bubble states
+    const states: BubbleState[] = []
+    for (let i = 0; i < 14; i++) {
+      const zone = BUBBLE_ZONES[i % BUBBLE_ZONES.length]
+      const baseX = zone.x[0] + Math.random() * (zone.x[1] - zone.x[0])
+      const baseY = zone.y[0] + Math.random() * (zone.y[1] - zone.y[0])
+      states.push({
+        baseX,
+        baseY,
+        speedX: 0.3 + Math.random() * 0.5,
+        speedY: 0.2 + Math.random() * 0.4,
+        phaseX: Math.random() * Math.PI * 2,
+        phaseY: Math.random() * Math.PI * 2,
+        amplitudeX: 8 + Math.random() * 16,
+        amplitudeY: 6 + Math.random() * 12,
+        entranceDelay: 800 + i * 150,
+        visible: false,
+      })
+    }
+    statesRef.current = states
+
+    const animate = (now: number) => {
+      animFrameRef.current = requestAnimationFrame(animate)
+
+      const elapsed = now - showTimeRef.current
+      const w = container.offsetWidth
+      const h = container.offsetHeight
+      if (w === 0 || h === 0) return
+
+      // Determine how many to show based on viewport
+      const viewportWidth = window.innerWidth
+      let maxVisible = 14
+      if (viewportWidth < 768) maxVisible = 6
+      else if (viewportWidth <= 1024) maxVisible = 10
+
+      const mx = mouseRef.current.x
+      const my = mouseRef.current.y
+
+      for (let i = 0; i < 14; i++) {
+        const el = bubblesRef.current[i]
+        if (!el) continue
+
+        const st = statesRef.current[i]
+
+        if (i >= maxVisible) {
+          el.style.opacity = '0'
+          continue
+        }
+
+        // Entrance timing
+        if (elapsed < st.entranceDelay) {
+          el.style.opacity = '0'
+          continue
+        }
+
+        const fadeIn = Math.min(1, (elapsed - st.entranceDelay) / 600)
+
+        // Lissajous offset
+        const t = now * 0.001
+        const lissX = Math.sin(t * st.speedX + st.phaseX) * st.amplitudeX
+        const lissY = Math.cos(t * st.speedY + st.phaseY) * st.amplitudeY
+
+        // Mouse parallax offset (subtle)
+        const parallaxStrength = 15
+        const parallaxX = (mx - 0.5) * parallaxStrength * (i % 2 === 0 ? 1 : -0.6)
+        const parallaxY = (my - 0.5) * parallaxStrength * (i % 2 === 0 ? -0.6 : 1)
+
+        const finalX = st.baseX * w + lissX + parallaxX
+        const finalY = st.baseY * h + lissY + parallaxY
+
+        el.style.transform = `translate3d(${finalX}px, ${finalY}px, 0)`
+        el.style.opacity = String(fadeIn * 0.9)
+      }
+    }
+
+    animFrameRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      cancelAnimationFrame(animFrameRef.current)
+      window.removeEventListener('mousemove', handleMouseMove)
+    }
+  }, [show])
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 5,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+      }}
+    >
+      {NOTIFICATION_BUBBLES.map((bubble, i) => {
+        const size = BUBBLE_SIZES[i]
+        return (
+          <div
+            key={i}
+            ref={(el) => { bubblesRef.current[i] = el }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding:
+                size === 'sm'
+                  ? '8px 12px'
+                  : size === 'lg'
+                    ? '14px 20px'
+                    : '10px 16px',
+              borderRadius: size === 'sm' ? 12 : size === 'lg' ? 20 : 16,
+              background: 'rgba(255,255,255,0.85)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.9)',
+              boxShadow:
+                '0 2px 8px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.5)',
+              willChange: 'transform',
+              pointerEvents: 'none',
+              userSelect: 'none',
+              opacity: 0,
+              fontSize: size === 'sm' ? 11 : size === 'lg' ? 14 : 13,
+            }}
+          >
+            {/* Icon */}
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                background: `${bubble.color}15`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: bubble.color,
+                  boxShadow: `0 0 6px ${bubble.color}66`,
+                }}
+              />
+            </div>
+            {/* Text */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 700,
+                  color: '#1A1A2E',
+                  lineHeight: 1.1,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {bubble.text}
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 400,
+                  fontSize: 10,
+                  color: '#94A3B8',
+                  lineHeight: 1.1,
+                }}
+              >
+                {bubble.subtext}
+              </span>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 /* ============================================
@@ -325,7 +556,6 @@ function MetricItem({
           const animate = (now: number) => {
             const elapsed = now - startTime
             const progress = Math.min(elapsed / duration, 1)
-            // ease-out-quart: 1 - pow(1-t, 4)
             const eased = 1 - Math.pow(1 - progress, 4)
             const current = eased * target
 
@@ -398,8 +628,8 @@ function MetricItem({
             width: 4,
             height: 4,
             borderRadius: '50%',
-            background: '#2E9AC4',
-            boxShadow: '0 0 6px rgba(46,154,196,0.6)',
+            background: '#5CBB5C',
+            boxShadow: '0 0 6px rgba(92,187,92,0.6)',
             flexShrink: 0,
           }}
         />
@@ -536,21 +766,15 @@ function ScrollIndicator({ show }: { show: boolean }) {
           }}
         />
       </div>
-      <style>{`
-        @keyframes scrollBounce {
-          0%, 100% { top: 4px; }
-          50% { top: 28px; }
-        }
-      `}</style>
     </div>
   )
 }
 
 /* ============================================
-   HERO COMPONENT — Centered, Full Viewport
+   HERO COMPONENT — Scaling Dashboard
    ============================================ */
 
-export default function Hero({ introComplete }: HeroProps) {
+export default function Hero({ introComplete }: { introComplete: boolean }) {
   const [show, setShow] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isTablet, setIsTablet] = useState(false)
@@ -581,16 +805,11 @@ export default function Hero({ introComplete }: HeroProps) {
         width: '100%',
         minHeight: '100vh',
         overflow: 'hidden',
-        background: '#FFFFFF',
+        background: '#FAFCFE',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundImage: `
-          linear-gradient(rgba(46,154,196,0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(46,154,196,0.04) 1px, transparent 1px)
-        `,
-        backgroundSize: '40px 40px',
       }}
     >
       <style>{`
@@ -602,52 +821,76 @@ export default function Hero({ introComplete }: HeroProps) {
           0% { background-position: 200% center; }
           100% { background-position: -200% center; }
         }
+        @keyframes scrollBounce {
+          0%, 100% { top: 4px; }
+          50% { top: 28px; }
+        }
       `}</style>
 
-      {/* GLSL Shader — Fullscreen background */}
+      {/* Layer 0 — Grid background */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          zIndex: 0,
+          backgroundImage: `
+            linear-gradient(rgba(46,154,196,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(46,154,196,0.03) 1px, transparent 1px)
+          `,
+          backgroundSize: '60px 60px',
+          WebkitMaskImage:
+            'radial-gradient(ellipse 80% 70% at 50% 55%, black 30%, transparent 80%)',
+          maskImage:
+            'radial-gradient(ellipse 80% 70% at 50% 55%, black 30%, transparent 80%)',
           pointerEvents: 'none',
         }}
-      >
-        <LiquidGlassCanvas show={show} />
+      />
+
+      {/* Layer 1 — Canvas chart */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <ScalingChart show={show} />
       </div>
 
-      {/* Content — Centered on top */}
-      <div
+      {/* Layer 2 — Floating bubbles */}
+      <FloatingBubbles show={show} />
+
+      {/* Layer 3 — Content card */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={show ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.6, delay: 0.4, ease: EASE_OUT_EXPO }}
         style={{
           position: 'relative',
-          zIndex: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
+          zIndex: 10,
+          maxWidth: isMobile ? '95%' : isTablet ? '90%' : 720,
           width: '100%',
-          maxWidth: 1100,
           padding: isMobile
-            ? '120px 20px 80px'
+            ? '32px 24px'
             : isTablet
-              ? '120px 40px 80px'
-              : '140px 48px 100px',
+              ? '40px 32px'
+              : 'clamp(40px, 5vw, 64px) clamp(32px, 4vw, 56px)',
+          textAlign: 'center',
+          background: 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(40px) saturate(1.4)',
+          WebkitBackdropFilter: 'blur(40px) saturate(1.4)',
+          borderRadius: isMobile ? 20 : isTablet ? 24 : 28,
+          border: '1px solid rgba(255,255,255,0.85)',
+          boxShadow:
+            '0 4px 16px rgba(0,0,0,0.03), 0 16px 64px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6)',
         }}
       >
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={show ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, delay: 0.2, ease: EASE_OUT_EXPO }}
+          transition={{ duration: 0.5, delay: 0.6, ease: EASE_OUT_EXPO }}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: 8,
             padding: '6px 14px',
             background: 'rgba(46,154,196,0.06)',
-            border: '1px solid rgba(46,154,196,0.12)',
-            borderRadius: 999,
+            border: '1px solid rgba(46,154,196,0.1)',
+            borderRadius: 100,
             marginBottom: 28,
           }}
         >
@@ -656,7 +899,7 @@ export default function Hero({ introComplete }: HeroProps) {
               width: 6,
               height: 6,
               borderRadius: '50%',
-              background: '#2E9AC4',
+              background: '#5CBB5C',
               flexShrink: 0,
               animation: 'pulse 2s ease-in-out infinite',
             }}
@@ -671,94 +914,89 @@ export default function Hero({ introComplete }: HeroProps) {
               color: '#2E9AC4',
             }}
           >
-            E-COMMERCE GROWTH AGENCY &middot; &euro;1B+ PORTFOLIO
+            E-COMMERCE GROWTH PARTNER &middot; &euro;10M+ MONTHLY AD SPEND
           </span>
         </motion.div>
 
         {/* Headline */}
         <h1
           style={{
-            fontFamily: 'var(--font-headline), var(--font-display)',
+            fontFamily: 'var(--font-display)',
             fontWeight: 800,
             fontSize: 'clamp(40px, 6vw, 80px)',
-            lineHeight: 1.08,
-            letterSpacing: '-0.03em',
+            lineHeight: 0.95,
+            letterSpacing: '-0.035em',
             color: '#1A1A2E',
             margin: 0,
-            maxWidth: 900,
           }}
         >
-          {['Wir bringen Ecom Brands', 'aufs n\u00e4chste'].map((line, i) => (
+          {[
+            { text: 'Your next', delay: 0.7 },
+            { text: null, delay: 0.85, accent: true },
+            { text: 'growth chapter', delay: 1.0 },
+            { text: 'starts here.', delay: 1.15 },
+          ].map((line, i) => (
             <motion.span
               key={i}
               initial={{ opacity: 0, y: 30 }}
               animate={show ? { opacity: 1, y: 0 } : {}}
               transition={{
                 duration: 0.6,
-                delay: 0.4 + i * 0.12,
+                delay: line.delay,
                 ease: EASE_OUT_EXPO,
               }}
-              style={{
-                display: 'block',
-              }}
+              style={{ display: 'block' }}
             >
-              {line}
+              {line.accent ? (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-accent)',
+                    fontWeight: 400,
+                    fontSize: '115%',
+                    background:
+                      'linear-gradient(90deg, #56B8DE, #2E9AC4, #1B7EA6, #56B8DE, #2E9AC4)',
+                    backgroundSize: '200% auto',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    animation: 'shimmer 4s linear infinite',
+                  }}
+                >
+                  satisfying
+                </span>
+              ) : (
+                line.text
+              )}
             </motion.span>
           ))}
-          <motion.span
-            initial={{ opacity: 0, y: 30 }}
-            animate={show ? { opacity: 1, y: 0 } : {}}
-            transition={{
-              duration: 0.6,
-              delay: 0.4 + 2 * 0.12,
-              ease: EASE_OUT_EXPO,
-            }}
-            style={{
-              display: 'block',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'var(--font-accent)',
-                fontWeight: 400,
-                fontSize: '115%',
-                background: 'linear-gradient(90deg, #56B8DE, #2E9AC4, #1B7EA6, #56B8DE, #2E9AC4)',
-                backgroundSize: '200% auto',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                animation: 'shimmer 4s linear infinite',
-              }}
-            >
-              Level
-            </span>
-          </motion.span>
         </h1>
 
-        {/* Subline */}
+        {/* Subheadline */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={show ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6, delay: 0.8, ease: EASE_OUT_EXPO }}
+          transition={{ duration: 0.6, delay: 1.4, ease: EASE_OUT_EXPO }}
           style={{
             fontFamily: 'var(--font-display)',
             fontWeight: 400,
-            fontSize: 'clamp(16px, 1.4vw, 19px)',
+            fontSize: 'clamp(15px, 1.3vw, 17px)',
             lineHeight: 1.7,
             color: '#4A5568',
-            maxWidth: 560,
-            marginTop: 24,
+            maxWidth: 520,
+            margin: '24px auto 0',
             letterSpacing: '-0.01em',
           }}
         >
-          Der Growth-Partner f&uuml;r ambitionierte E-Commerce Brands.
+          Iron Media hilft etablierten E-Commerce Brands dabei, von solide zu
+          spektakul&auml;r zu wachsen &mdash; mit datengetriebenem Performance
+          Marketing und Inhouse-Teamaufbau.
         </motion.p>
 
-        {/* CTA Buttons */}
+        {/* CTAs */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={show ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, delay: 1.0, ease: EASE_OUT_EXPO }}
+          transition={{ duration: 0.5, delay: 1.6, ease: EASE_OUT_EXPO }}
           style={{
             display: 'flex',
             gap: 12,
@@ -767,9 +1005,7 @@ export default function Hero({ introComplete }: HeroProps) {
             justifyContent: 'center',
           }}
         >
-          <PrimaryCTA href="#contact">
-            Kostenloses Audit &rarr;
-          </PrimaryCTA>
+          <PrimaryCTA href="#contact">Kostenloses Audit &rarr;</PrimaryCTA>
 
           <a
             href="#cases"
@@ -800,21 +1036,23 @@ export default function Hero({ introComplete }: HeroProps) {
               e.currentTarget.style.background = 'transparent'
             }}
           >
-            Case Studies
+            Case Studies ansehen
           </a>
         </motion.div>
 
-        {/* Metrics */}
+        {/* Metrics row */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={show ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 1.2, ease: EASE_OUT_EXPO }}
+          transition={{ duration: 0.6, delay: 1.8, ease: EASE_OUT_EXPO }}
           style={{
             display: isMobile ? 'grid' : 'flex',
             gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : undefined,
             flexDirection: isMobile ? undefined : 'row',
             justifyContent: 'center',
-            marginTop: 48,
+            marginTop: 36,
+            paddingTop: 28,
+            borderTop: '1px solid rgba(46,154,196,0.08)',
           }}
         >
           {HERO_METRICS.map((metric, i) => (
@@ -827,7 +1065,69 @@ export default function Hero({ introComplete }: HeroProps) {
             />
           ))}
         </motion.div>
-      </div>
+      </motion.div>
+
+      {/* Trusted By logos */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={show ? { opacity: 1 } : {}}
+        transition={{ duration: 0.6, delay: 2.0, ease: EASE_OUT_EXPO }}
+        style={{
+          position: 'relative',
+          zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          marginTop: 40,
+          gap: 16,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase' as const,
+            color: '#94A3B8',
+          }}
+        >
+          Trusted by leading brands
+        </span>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 24,
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+          }}
+        >
+          {TRUSTED_LOGOS.map((logo) => (
+            <img
+              key={logo.name}
+              src={`https://logo.clearbit.com/${logo.domain}`}
+              alt={logo.name}
+              style={{
+                height: 20,
+                opacity: 0.35,
+                filter: 'grayscale(100%)',
+                transition: 'opacity 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.7'
+                e.currentTarget.style.filter = 'grayscale(0%)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '0.35'
+                e.currentTarget.style.filter = 'grayscale(100%)'
+              }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+          ))}
+        </div>
+      </motion.div>
 
       {/* Scroll Indicator */}
       <ScrollIndicator show={show} />

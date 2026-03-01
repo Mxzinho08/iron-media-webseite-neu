@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
-import { Allura } from 'next/font/google'
+import { Allura, Plus_Jakarta_Sans } from 'next/font/google'
 import './globals.css'
 
 const allura = Allura({
@@ -9,6 +9,13 @@ const allura = Allura({
   variable: '--font-accent',
   display: 'swap',
   weight: '400',
+})
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-headline',
+  display: 'swap',
+  weight: ['700', '800'],
 })
 
 export const metadata: Metadata = {
@@ -23,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={`${GeistSans.variable} ${GeistMono.variable} ${allura.variable}`}>
+    <html lang="de" className={`${GeistSans.variable} ${GeistMono.variable} ${allura.variable} ${plusJakarta.variable}`}>
       <body className="bg-white text-text-dark antialiased overflow-x-hidden">
         {children}
       </body>

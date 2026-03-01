@@ -43,52 +43,54 @@ float rrect(vec2 p, vec2 h, float r) {
   return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
 }
 
-vec4 logoGroup(vec2 uv, vec2 pos, float sc, float rot, float intensity) {
+vec4 logoGroup(vec2 uv, vec2 pos, float sc, float rot, float intensity, float time) {
   vec2 p = uv - pos;
   float c = cos(rot), s = sin(rot);
   p = mat2(c, -s, s, c) * p;
   p /= sc;
 
-  float bw = 0.012, gap = 0.005, r = bw * 0.5;
-  // CORRECT logo colors: bright, saturated
-  vec3 col1 = vec3(0.337, 0.722, 0.871); // #56B8DE sky-blue
-  vec3 col2 = vec3(0.180, 0.604, 0.769); // #2E9AC4 ocean-blue
-  vec3 col3 = vec3(0.106, 0.494, 0.651); // #1B7EA6 deep-teal
+  // Liquid distortion — organic flowing edges
+  p.x += sin(p.y * 100.0 + time * 0.7) * 0.0005;
+  p.y += cos(p.x * 80.0 + time * 0.5) * 0.0005;
+
+  float bw = 0.007, gap = 0.004, r = bw * 0.5;
+  vec3 col1 = vec3(0.337, 0.722, 0.871); // sky-blue
+  vec3 col2 = vec3(0.180, 0.604, 0.769); // ocean-blue
+  vec3 col3 = vec3(0.106, 0.494, 0.651); // deep-teal
   float x1 = -(bw + gap), x3 = bw + gap;
 
   vec4 result = vec4(0.0);
 
   // Bar 1
-  float d1 = rrect(p - vec2(x1, 0.0), vec2(bw*0.5, 0.0225), r);
+  float d1 = rrect(p - vec2(x1, 0.0), vec2(bw*0.5, 0.014), r);
   float f1 = smoothstep(0.001, -0.001, d1);
   if (f1 > 0.0) {
-    float bright = mix(0.7, 1.1, smoothstep(-bw*0.5, bw*0.5, p.x - x1));
+    float bright = mix(0.75, 1.15, smoothstep(-bw*0.5, bw*0.5, p.x - x1));
     result = vec4(col1 * bright * intensity, f1 * 0.7 * intensity);
   }
-  // Thin bright edge (glass rim)
-  float edge1 = smoothstep(0.003, 0.0, abs(d1)) * 0.4 * intensity;
+  float edge1 = smoothstep(0.002, 0.0, abs(d1)) * 0.35 * intensity;
   result.rgb += col1 * edge1; result.a = max(result.a, edge1);
 
   // Bar 2 (tallest)
-  float d2 = rrect(p - vec2(0.0, 0.0), vec2(bw*0.5, 0.031), r);
+  float d2 = rrect(p, vec2(bw*0.5, 0.020), r);
   float f2 = smoothstep(0.001, -0.001, d2);
   if (f2 > 0.0) {
-    float bright = mix(0.7, 1.1, smoothstep(-bw*0.5, bw*0.5, p.x));
+    float bright = mix(0.75, 1.15, smoothstep(-bw*0.5, bw*0.5, p.x));
     vec4 b2 = vec4(col2 * bright * intensity, f2 * 0.75 * intensity);
     result.rgb = mix(result.rgb, b2.rgb, b2.a); result.a = max(result.a, b2.a);
   }
-  float edge2 = smoothstep(0.003, 0.0, abs(d2)) * 0.4 * intensity;
+  float edge2 = smoothstep(0.002, 0.0, abs(d2)) * 0.35 * intensity;
   result.rgb += col2 * edge2; result.a = max(result.a, edge2);
 
   // Bar 3
-  float d3 = rrect(p - vec2(x3, 0.0), vec2(bw*0.5, 0.025), r);
+  float d3 = rrect(p - vec2(x3, 0.0), vec2(bw*0.5, 0.016), r);
   float f3 = smoothstep(0.001, -0.001, d3);
   if (f3 > 0.0) {
-    float bright = mix(0.7, 1.1, smoothstep(-bw*0.5, bw*0.5, p.x - x3));
+    float bright = mix(0.75, 1.15, smoothstep(-bw*0.5, bw*0.5, p.x - x3));
     vec4 b3 = vec4(col3 * bright * intensity, f3 * 0.65 * intensity);
     result.rgb = mix(result.rgb, b3.rgb, b3.a); result.a = max(result.a, b3.a);
   }
-  float edge3 = smoothstep(0.003, 0.0, abs(d3)) * 0.4 * intensity;
+  float edge3 = smoothstep(0.002, 0.0, abs(d3)) * 0.35 * intensity;
   result.rgb += col3 * edge3; result.a = max(result.a, edge3);
 
   return result;
@@ -112,47 +114,48 @@ void main() {
   float grid = min(gridX, gridY);
   vec3 finalColor = mix(vec3(1.0), vec3(0.92, 0.96, 1.0), (1.0 - grid) * 0.08);
 
-  // 16 floating logo groups — fill entire viewport
-  // Use hardcoded positions spread across -0.5 to +0.5
-  vec2 positions[16];
-  float scales[16];
-  float rotSpeeds[16];
-  float moveSpeeds[16];
-  float glows[16];
+  // 24 floating logo groups — hex-grid layout, fill entire viewport
+  vec2 positions[24];
+  float scales[24];
+  float glows[24];
 
-  // Foreground (3) — large, bright
-  positions[0]=vec2(0.20, 0.15);  scales[0]=1.6; rotSpeeds[0]=0.04;  moveSpeeds[0]=0.035; glows[0]=0.95;
-  positions[1]=vec2(-0.25,-0.18); scales[1]=1.4; rotSpeeds[1]=-0.035;moveSpeeds[1]=0.03;  glows[1]=0.90;
-  positions[2]=vec2(0.35,-0.05);  scales[2]=1.7; rotSpeeds[2]=0.03;  moveSpeeds[2]=0.032; glows[2]=1.0;
+  positions[0]=vec2(-0.40, 0.42); scales[0]=0.80; glows[0]=0.38;
+  positions[1]=vec2(-0.15, 0.40); scales[1]=1.15; glows[1]=0.55;
+  positions[2]=vec2( 0.12, 0.43); scales[2]=0.90; glows[2]=0.42;
+  positions[3]=vec2( 0.38, 0.41); scales[3]=1.05; glows[3]=0.50;
+  positions[4]=vec2(-0.48, 0.24); scales[4]=0.70; glows[4]=0.32;
+  positions[5]=vec2(-0.24, 0.22); scales[5]=1.50; glows[5]=0.75;
+  positions[6]=vec2( 0.02, 0.25); scales[6]=1.25; glows[6]=0.65;
+  positions[7]=vec2( 0.28, 0.23); scales[7]=1.60; glows[7]=0.82;
+  positions[8]=vec2( 0.50, 0.20); scales[8]=0.72; glows[8]=0.34;
+  positions[9]=vec2(-0.44, 0.04); scales[9]=0.95; glows[9]=0.48;
+  positions[10]=vec2(-0.18, 0.02); scales[10]=1.85; glows[10]=0.92;
+  positions[11]=vec2( 0.14,-0.01); scales[11]=1.70; glows[11]=0.88;
+  positions[12]=vec2( 0.42, 0.03); scales[12]=1.10; glows[12]=0.55;
+  positions[13]=vec2(-0.50,-0.18); scales[13]=0.68; glows[13]=0.30;
+  positions[14]=vec2(-0.26,-0.20); scales[14]=1.45; glows[14]=0.72;
+  positions[15]=vec2( 0.00,-0.17); scales[15]=1.30; glows[15]=0.68;
+  positions[16]=vec2( 0.26,-0.19); scales[16]=1.55; glows[16]=0.78;
+  positions[17]=vec2( 0.50,-0.16); scales[17]=0.72; glows[17]=0.34;
+  positions[18]=vec2(-0.42,-0.40); scales[18]=0.78; glows[18]=0.36;
+  positions[19]=vec2(-0.16,-0.42); scales[19]=1.10; glows[19]=0.52;
+  positions[20]=vec2( 0.10,-0.39); scales[20]=0.92; glows[20]=0.44;
+  positions[21]=vec2( 0.38,-0.41); scales[21]=1.00; glows[21]=0.48;
+  positions[22]=vec2(-0.34, 0.32); scales[22]=0.85; glows[22]=0.40;
+  positions[23]=vec2( 0.34,-0.30); scales[23]=0.88; glows[23]=0.42;
 
-  // Midground (5) — medium
-  positions[3]=vec2(-0.38, 0.25); scales[3]=1.0; rotSpeeds[3]=-0.06; moveSpeeds[3]=0.05;  glows[3]=0.7;
-  positions[4]=vec2(0.42, 0.28);  scales[4]=0.95;rotSpeeds[4]=0.07;  moveSpeeds[4]=0.055; glows[4]=0.65;
-  positions[5]=vec2(0.02,-0.35);  scales[5]=1.1; rotSpeeds[5]=-0.05; moveSpeeds[5]=0.04;  glows[5]=0.7;
-  positions[6]=vec2(-0.42,-0.10); scales[6]=0.9; rotSpeeds[6]=0.08;  moveSpeeds[6]=0.06;  glows[6]=0.6;
-  positions[7]=vec2(0.10, 0.38);  scales[7]=1.0; rotSpeeds[7]=-0.04; moveSpeeds[7]=0.045; glows[7]=0.65;
-
-  // Background (8) — small, dimmer, fill gaps
-  positions[8]=vec2(0.45, 0.05);   scales[8]=0.55; rotSpeeds[8]=-0.09;  moveSpeeds[8]=0.07;  glows[8]=0.4;
-  positions[9]=vec2(-0.45, 0.18);  scales[9]=0.5;  rotSpeeds[9]=0.10;   moveSpeeds[9]=0.08;  glows[9]=0.35;
-  positions[10]=vec2(0.22, 0.40);  scales[10]=0.5; rotSpeeds[10]=-0.08; moveSpeeds[10]=0.065; glows[10]=0.35;
-  positions[11]=vec2(-0.18,-0.40); scales[11]=0.45;rotSpeeds[11]=0.11;  moveSpeeds[11]=0.09;  glows[11]=0.3;
-  positions[12]=vec2(0.48,-0.25);  scales[12]=0.5; rotSpeeds[12]=-0.07; moveSpeeds[12]=0.075; glows[12]=0.35;
-  positions[13]=vec2(-0.48, 0.35); scales[13]=0.45;rotSpeeds[13]=0.09;  moveSpeeds[13]=0.085; glows[13]=0.3;
-  positions[14]=vec2(-0.10, 0.42); scales[14]=0.4; rotSpeeds[14]=-0.10; moveSpeeds[14]=0.09;  glows[14]=0.3;
-  positions[15]=vec2(0.30,-0.38);  scales[15]=0.5; rotSpeeds[15]=0.08;  moveSpeeds[15]=0.07;  glows[15]=0.35;
-
-  for (int i = 15; i >= 0; i--) {
-    float t = uTime * moveSpeeds[i];
+  for (int i = 23; i >= 0; i--) {
+    float fi = float(i);
+    float t = uTime * (0.03 + fi * 0.0012);
     vec2 moveOff = vec2(
-      sin(t * 1.1 + float(i) * 1.7) * 0.035 + sin(t * 0.5 + float(i) * 0.8) * 0.02,
-      cos(t * 0.9 + float(i) * 2.3) * 0.025 + cos(t * 0.35 + float(i) * 1.2) * 0.015
+      sin(t * 1.1 + fi * 1.7) * 0.045 + sin(t * 0.4 + fi * 0.9) * 0.02,
+      cos(t * 0.9 + fi * 2.3) * 0.04 + cos(t * 0.3 + fi * 1.3) * 0.018
     );
     vec2 pos = positions[i] + moveOff;
-    float cull = scales[i] * 0.05;
+    float cull = scales[i] * 0.045;
     if (abs(p.x - pos.x) < cull && abs(p.y - pos.y) < cull) {
-      float rot = uTime * rotSpeeds[i];
-      vec4 group = logoGroup(p, pos, scales[i], rot, glows[i]);
+      float rot = uTime * 0.03 * (1.0 - 2.0 * mod(fi, 2.0));
+      vec4 group = logoGroup(p, pos, scales[i], rot, glows[i], uTime);
       finalColor = mix(finalColor, group.rgb, group.a * 0.9);
     }
   }
@@ -675,7 +678,7 @@ export default function Hero({ introComplete }: HeroProps) {
         {/* Headline */}
         <h1
           style={{
-            fontFamily: 'var(--font-display)',
+            fontFamily: 'var(--font-headline), var(--font-display)',
             fontWeight: 800,
             fontSize: 'clamp(40px, 6vw, 80px)',
             lineHeight: 1.08,

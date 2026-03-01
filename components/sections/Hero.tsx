@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { HERO_METRICS, TRUSTED_BRANDS } from '@/lib/constants'
+import { HERO_METRICS } from '@/lib/constants'
 
 /* ============================================
-   IRON MEDIA — HERO v5
+   IRON MEDIA — HERO v6
    Centered layout, fullscreen GLSL liquid glass
-   12 floating SDF logo groups
+   16 floating SDF logo groups, no mouse interaction
    ============================================ */
 
 interface HeroProps {
@@ -29,89 +29,67 @@ void main() {
 
 /* ============================================
    FRAGMENT SHADER — Liquid Glass Logo Groups
+   Ultra-cheap: 1 global distortion, 16 groups x 3 bars
+   No per-bar distortion, no fresnel, no specular
    ============================================ */
 const FRAGMENT_SHADER = `
 precision mediump float;
 varying vec2 vUv;
 uniform float uTime;
 uniform vec2 uResolution;
-uniform vec2 uMouse;
 
-/* --- Rounded rectangle SDF --- */
 float rrect(vec2 p, vec2 h, float r) {
   vec2 d = abs(p) - h + r;
   return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
 }
 
-/* --- Liquid glass distortion (cheap sine-based, NO fbm) --- */
-vec2 liquidDistort(vec2 p, float t) {
-  return vec2(
-    sin(p.y * 8.0 + t * 0.4) * 0.003 + sin(p.y * 3.0 + t * 0.2) * 0.005,
-    cos(p.x * 6.0 + t * 0.3) * 0.003 + cos(p.x * 2.5 + t * 0.15) * 0.004
-  );
-}
-
-/* --- Fresnel edge glow (glass rim light) --- */
-float fresnel(float d) {
-  return pow(smoothstep(0.005, -0.005, abs(d)), 1.8);
-}
-
-/* --- Single glass bar --- */
-vec4 glassBar(vec2 p, vec2 barPos, vec2 halfSize, float radius, vec3 barColor, float intensity) {
-  // Liquid distortion
-  vec2 dp = p + liquidDistort(p, uTime);
-  float d = rrect(dp - barPos, halfSize, radius);
-
-  vec4 result = vec4(0.0);
-
-  // Interior fill — transparent glass
-  float fill = smoothstep(0.002, -0.002, d);
-  if (fill > 0.0) {
-    // Gradient across bar width + liquid flow brightness
-    float flow = 0.08 * sin((p.x - barPos.x) * 40.0 + uTime * 0.3) * sin((p.y - barPos.y) * 20.0 + uTime * 0.2);
-    float bright = mix(0.6, 1.0, smoothstep(-halfSize.x, halfSize.x, dp.x - barPos.x)) + flow;
-    vec3 col = barColor * bright * intensity;
-
-    // Specular highlight (single white hot-spot)
-    vec2 specPos = barPos + vec2(halfSize.x * 0.25, halfSize.y * 0.3);
-    float spec = exp(-dot(dp - specPos, dp - specPos) * 18000.0);
-    col += vec3(1.0) * spec * 0.6 * intensity;
-
-    // Glass transparency: 0.35-0.55
-    result = vec4(col, fill * mix(0.35, 0.55, intensity));
-  }
-
-  // Fresnel edge glow (bright rim, no shadow)
-  float fr = fresnel(d);
-  result.rgb += barColor * fr * intensity * 0.8;
-  result.a = max(result.a, fr * 0.5);
-
-  return result;
-}
-
-/* --- Logo group: 3 bars --- */
-vec4 logoGroup(vec2 uv, vec2 pos, float sc, float rot, float glowIntensity) {
+vec4 logoGroup(vec2 uv, vec2 pos, float sc, float rot, float intensity) {
   vec2 p = uv - pos;
   float c = cos(rot), s = sin(rot);
   p = mat2(c, -s, s, c) * p;
   p /= sc;
 
   float bw = 0.012, gap = 0.005, r = bw * 0.5;
-  vec3 col1 = vec3(0.337, 0.722, 0.871);
-  vec3 col2 = vec3(0.180, 0.604, 0.769);
-  vec3 col3 = vec3(0.106, 0.494, 0.651);
+  // CORRECT logo colors: bright, saturated
+  vec3 col1 = vec3(0.337, 0.722, 0.871); // #56B8DE sky-blue
+  vec3 col2 = vec3(0.180, 0.604, 0.769); // #2E9AC4 ocean-blue
+  vec3 col3 = vec3(0.106, 0.494, 0.651); // #1B7EA6 deep-teal
   float x1 = -(bw + gap), x3 = bw + gap;
 
   vec4 result = vec4(0.0);
 
-  vec4 b1 = glassBar(p, vec2(x1, 0.0), vec2(bw*0.5, 0.0225), r, col1, glowIntensity);
-  result.rgb = mix(result.rgb, b1.rgb, b1.a); result.a = max(result.a, b1.a);
+  // Bar 1
+  float d1 = rrect(p - vec2(x1, 0.0), vec2(bw*0.5, 0.0225), r);
+  float f1 = smoothstep(0.001, -0.001, d1);
+  if (f1 > 0.0) {
+    float bright = mix(0.7, 1.1, smoothstep(-bw*0.5, bw*0.5, p.x - x1));
+    result = vec4(col1 * bright * intensity, f1 * 0.7 * intensity);
+  }
+  // Thin bright edge (glass rim)
+  float edge1 = smoothstep(0.003, 0.0, abs(d1)) * 0.4 * intensity;
+  result.rgb += col1 * edge1; result.a = max(result.a, edge1);
 
-  vec4 b2 = glassBar(p, vec2(0.0, 0.0), vec2(bw*0.5, 0.031), r, col2, glowIntensity);
-  result.rgb = mix(result.rgb, b2.rgb, b2.a); result.a = max(result.a, b2.a);
+  // Bar 2 (tallest)
+  float d2 = rrect(p - vec2(0.0, 0.0), vec2(bw*0.5, 0.031), r);
+  float f2 = smoothstep(0.001, -0.001, d2);
+  if (f2 > 0.0) {
+    float bright = mix(0.7, 1.1, smoothstep(-bw*0.5, bw*0.5, p.x));
+    vec4 b2 = vec4(col2 * bright * intensity, f2 * 0.75 * intensity);
+    result.rgb = mix(result.rgb, b2.rgb, b2.a); result.a = max(result.a, b2.a);
+  }
+  float edge2 = smoothstep(0.003, 0.0, abs(d2)) * 0.4 * intensity;
+  result.rgb += col2 * edge2; result.a = max(result.a, edge2);
 
-  vec4 b3 = glassBar(p, vec2(x3, 0.0), vec2(bw*0.5, 0.025), r, col3, glowIntensity);
-  result.rgb = mix(result.rgb, b3.rgb, b3.a); result.a = max(result.a, b3.a);
+  // Bar 3
+  float d3 = rrect(p - vec2(x3, 0.0), vec2(bw*0.5, 0.025), r);
+  float f3 = smoothstep(0.001, -0.001, d3);
+  if (f3 > 0.0) {
+    float bright = mix(0.7, 1.1, smoothstep(-bw*0.5, bw*0.5, p.x - x3));
+    vec4 b3 = vec4(col3 * bright * intensity, f3 * 0.65 * intensity);
+    result.rgb = mix(result.rgb, b3.rgb, b3.a); result.a = max(result.a, b3.a);
+  }
+  float edge3 = smoothstep(0.003, 0.0, abs(d3)) * 0.4 * intensity;
+  result.rgb += col3 * edge3; result.a = max(result.a, edge3);
 
   return result;
 }
@@ -120,42 +98,60 @@ void main() {
   vec2 uv = vUv;
   float aspect = uResolution.x / uResolution.y;
   vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
-  vec2 mouseOff = (uMouse - 0.5) * 0.04;
 
-  vec3 finalColor = vec3(1.0);
+  // Single global liquid distortion (applied to all groups)
+  vec2 globalDistort = vec2(
+    sin(uv.y * 5.0 + uTime * 0.25) * 0.002 + sin(uv.y * 2.0 + uTime * 0.12) * 0.003,
+    cos(uv.x * 4.0 + uTime * 0.20) * 0.002 + cos(uv.x * 1.8 + uTime * 0.10) * 0.003
+  );
+  p += globalDistort;
 
-  // 8 floating logo groups (reduced from 12 for performance)
-  vec2 positions[8];
-  float scales[8];
-  float rotSpeeds[8];
-  float moveSpeeds[8];
-  float glows[8];
+  // Subtle blue grid background
+  float gridX = smoothstep(0.0, 0.001, abs(mod(uv.x * 40.0, 1.0) - 0.5) - 0.495);
+  float gridY = smoothstep(0.0, 0.001, abs(mod(uv.y * 40.0, 1.0) - 0.5) - 0.495);
+  float grid = min(gridX, gridY);
+  vec3 finalColor = mix(vec3(1.0), vec3(0.92, 0.96, 1.0), (1.0 - grid) * 0.08);
 
-  // Foreground (2)
-  positions[0] = vec2(0.18, 0.14);    scales[0]=1.8; rotSpeeds[0]=0.06;  moveSpeeds[0]=0.04; glows[0]=0.95;
-  positions[1] = vec2(-0.22, -0.16);  scales[1]=1.5; rotSpeeds[1]=-0.05; moveSpeeds[1]=0.035;glows[1]=0.85;
+  // 16 floating logo groups — fill entire viewport
+  // Use hardcoded positions spread across -0.5 to +0.5
+  vec2 positions[16];
+  float scales[16];
+  float rotSpeeds[16];
+  float moveSpeeds[16];
+  float glows[16];
 
-  // Midground (3)
-  positions[2] = vec2(0.32, -0.10);   scales[2]=1.1; rotSpeeds[2]=0.08;  moveSpeeds[2]=0.055;glows[2]=0.7;
-  positions[3] = vec2(-0.34, 0.22);   scales[3]=1.0; rotSpeeds[3]=-0.07; moveSpeeds[3]=0.06; glows[3]=0.65;
-  positions[4] = vec2(0.0, -0.30);    scales[4]=1.2; rotSpeeds[4]=0.05;  moveSpeeds[4]=0.045;glows[4]=0.7;
+  // Foreground (3) — large, bright
+  positions[0]=vec2(0.20, 0.15);  scales[0]=1.6; rotSpeeds[0]=0.04;  moveSpeeds[0]=0.035; glows[0]=0.95;
+  positions[1]=vec2(-0.25,-0.18); scales[1]=1.4; rotSpeeds[1]=-0.035;moveSpeeds[1]=0.03;  glows[1]=0.90;
+  positions[2]=vec2(0.35,-0.05);  scales[2]=1.7; rotSpeeds[2]=0.03;  moveSpeeds[2]=0.032; glows[2]=1.0;
 
-  // Background (3)
-  positions[5] = vec2(0.38, 0.26);    scales[5]=0.6; rotSpeeds[5]=-0.10; moveSpeeds[5]=0.08; glows[5]=0.4;
-  positions[6] = vec2(-0.36, -0.06);  scales[6]=0.55;rotSpeeds[6]=0.12;  moveSpeeds[6]=0.09; glows[6]=0.35;
-  positions[7] = vec2(0.12, 0.34);    scales[7]=0.5; rotSpeeds[7]=-0.08; moveSpeeds[7]=0.07; glows[7]=0.35;
+  // Midground (5) — medium
+  positions[3]=vec2(-0.38, 0.25); scales[3]=1.0; rotSpeeds[3]=-0.06; moveSpeeds[3]=0.05;  glows[3]=0.7;
+  positions[4]=vec2(0.42, 0.28);  scales[4]=0.95;rotSpeeds[4]=0.07;  moveSpeeds[4]=0.055; glows[4]=0.65;
+  positions[5]=vec2(0.02,-0.35);  scales[5]=1.1; rotSpeeds[5]=-0.05; moveSpeeds[5]=0.04;  glows[5]=0.7;
+  positions[6]=vec2(-0.42,-0.10); scales[6]=0.9; rotSpeeds[6]=0.08;  moveSpeeds[6]=0.06;  glows[6]=0.6;
+  positions[7]=vec2(0.10, 0.38);  scales[7]=1.0; rotSpeeds[7]=-0.04; moveSpeeds[7]=0.045; glows[7]=0.65;
 
-  for (int i = 7; i >= 0; i--) {
+  // Background (8) — small, dimmer, fill gaps
+  positions[8]=vec2(0.45, 0.05);   scales[8]=0.55; rotSpeeds[8]=-0.09;  moveSpeeds[8]=0.07;  glows[8]=0.4;
+  positions[9]=vec2(-0.45, 0.18);  scales[9]=0.5;  rotSpeeds[9]=0.10;   moveSpeeds[9]=0.08;  glows[9]=0.35;
+  positions[10]=vec2(0.22, 0.40);  scales[10]=0.5; rotSpeeds[10]=-0.08; moveSpeeds[10]=0.065; glows[10]=0.35;
+  positions[11]=vec2(-0.18,-0.40); scales[11]=0.45;rotSpeeds[11]=0.11;  moveSpeeds[11]=0.09;  glows[11]=0.3;
+  positions[12]=vec2(0.48,-0.25);  scales[12]=0.5; rotSpeeds[12]=-0.07; moveSpeeds[12]=0.075; glows[12]=0.35;
+  positions[13]=vec2(-0.48, 0.35); scales[13]=0.45;rotSpeeds[13]=0.09;  moveSpeeds[13]=0.085; glows[13]=0.3;
+  positions[14]=vec2(-0.10, 0.42); scales[14]=0.4; rotSpeeds[14]=-0.10; moveSpeeds[14]=0.09;  glows[14]=0.3;
+  positions[15]=vec2(0.30,-0.38);  scales[15]=0.5; rotSpeeds[15]=0.08;  moveSpeeds[15]=0.07;  glows[15]=0.35;
+
+  for (int i = 15; i >= 0; i--) {
     float t = uTime * moveSpeeds[i];
-    vec2 moveOffset = vec2(
-      sin(t * 1.1 + float(i) * 1.7) * 0.04 + sin(t * 0.6 + float(i) * 0.9) * 0.02,
-      cos(t * 0.9 + float(i) * 2.3) * 0.03 + cos(t * 0.4 + float(i) * 1.3) * 0.015
+    vec2 moveOff = vec2(
+      sin(t * 1.1 + float(i) * 1.7) * 0.035 + sin(t * 0.5 + float(i) * 0.8) * 0.02,
+      cos(t * 0.9 + float(i) * 2.3) * 0.025 + cos(t * 0.35 + float(i) * 1.2) * 0.015
     );
-    vec2 parallax = mouseOff * scales[i] * 0.8;
-    vec2 pos = positions[i] + moveOffset + parallax;
+    vec2 pos = positions[i] + moveOff;
     float rot = uTime * rotSpeeds[i];
     vec4 group = logoGroup(p, pos, scales[i], rot, glows[i]);
-    finalColor = mix(finalColor, group.rgb, group.a * 0.85);
+    finalColor = mix(finalColor, group.rgb, group.a * 0.9);
   }
 
   gl_FragColor = vec4(finalColor, 1.0);
@@ -164,13 +160,12 @@ void main() {
 
 /* ============================================
    LIQUID GLASS — Three.js Shader Canvas
+   No mouse interaction, autonomous Lissajous motion
    ============================================ */
 
 function LiquidGlassCanvas({ show }: { show: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const disposedRef = useRef(false)
-  const mouseRef = useRef({ x: 0.5, y: 0.5 })
-  const mouseLerpRef = useRef({ x: 0.5, y: 0.5 })
 
   useEffect(() => {
     if (!containerRef.current || !show) return
@@ -210,7 +205,6 @@ function LiquidGlassCanvas({ show }: { show: boolean }) {
       const uniforms = {
         uTime: { value: 0.0 },
         uResolution: { value: new THREE.Vector2(width, height) },
-        uMouse: { value: new THREE.Vector2(0.5, 0.5) },
       }
 
       const geometry = new THREE.PlaneGeometry(2, 2)
@@ -222,13 +216,6 @@ function LiquidGlassCanvas({ show }: { show: boolean }) {
 
       const mesh = new THREE.Mesh(geometry, material)
       scene.add(mesh)
-
-      // Mouse tracking (on window, since canvas is pointer-events: none)
-      const handleMouseMove = (e: MouseEvent) => {
-        mouseRef.current.x = e.clientX / window.innerWidth
-        mouseRef.current.y = 1.0 - e.clientY / window.innerHeight
-      }
-      window.addEventListener('mousemove', handleMouseMove)
 
       // Debounced resize
       const handleResize = () => {
@@ -249,11 +236,6 @@ function LiquidGlassCanvas({ show }: { show: boolean }) {
         if (disposedRef.current) return
         animationId = requestAnimationFrame(animate)
 
-        // Smoother mouse lerp (0.03)
-        mouseLerpRef.current.x += (mouseRef.current.x - mouseLerpRef.current.x) * 0.03
-        mouseLerpRef.current.y += (mouseRef.current.y - mouseLerpRef.current.y) * 0.03
-        uniforms.uMouse.value.set(mouseLerpRef.current.x, mouseLerpRef.current.y)
-
         uniforms.uTime.value = (performance.now() - startTime) / 1000
 
         renderer.render(scene, camera)
@@ -261,7 +243,6 @@ function LiquidGlassCanvas({ show }: { show: boolean }) {
       animate()
 
       return () => {
-        window.removeEventListener('mousemove', handleMouseMove)
         window.removeEventListener('resize', handleResize)
         clearTimeout(resizeTimeout)
         cancelAnimationFrame(animationId)
@@ -595,6 +576,11 @@ export default function Hero({ introComplete }: HeroProps) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundImage: `
+          linear-gradient(rgba(46,154,196,0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(46,154,196,0.04) 1px, transparent 1px)
+        `,
+        backgroundSize: '40px 40px',
       }}
     >
       <style>{`
@@ -830,72 +816,6 @@ export default function Hero({ introComplete }: HeroProps) {
               isMobile={isMobile}
             />
           ))}
-        </motion.div>
-
-        {/* Trusted By */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={show ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6, delay: 1.4, ease: EASE_OUT_EXPO }}
-          style={{
-            marginTop: 48,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 16,
-            borderTop: '1px solid rgba(226,232,240,0.6)',
-            paddingTop: 28,
-            width: '100%',
-          }}
-        >
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              fontWeight: 500,
-              letterSpacing: '0.2em',
-              textTransform: 'uppercase' as const,
-              color: '#94A3B8',
-            }}
-          >
-            TRUSTED BY
-          </span>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'clamp(24px, 4vw, 48px)',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-            }}
-          >
-            {TRUSTED_BRANDS.map((brand, i) => (
-              <motion.span
-                key={brand.name}
-                initial={{ opacity: 0 }}
-                animate={show ? { opacity: 0.45 } : {}}
-                transition={{
-                  duration: 0.4,
-                  delay: 1.5 + i * 0.05,
-                  ease: EASE_OUT_EXPO,
-                }}
-                whileHover={{ opacity: 0.8 }}
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 700,
-                  fontSize: 13,
-                  letterSpacing: '0.05em',
-                  color: brand.color,
-                  cursor: 'default',
-                  transition: 'opacity 200ms ease',
-                  userSelect: 'none',
-                }}
-              >
-                {brand.name}
-              </motion.span>
-            ))}
-          </div>
         </motion.div>
       </div>
 

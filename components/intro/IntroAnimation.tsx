@@ -24,7 +24,7 @@ const COLORS = {
   textMuted: '#94A3B8',
 } as const
 
-const EASE_BOUNCY = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+const EASE_BOUNCY = 'cubic-bezier(0.22, 1.4, 0.36, 1)'
 const EASE_FADE = 'cubic-bezier(0.4, 0, 0.2, 1)'
 const EASE_OUT_EXPO = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const EASE_MEDIA = 'cubic-bezier(0.25, 1, 0.5, 1)'
@@ -45,10 +45,11 @@ const WORD_TIMINGS = [400, 500, 600, 700, 850, 950, 1050]
 
 const KEYFRAMES_CSS = `
 @keyframes wordBounce {
-  0%   { opacity: 0; transform: translateY(-25px) scale(0.95); }
-  50%  { opacity: 1; transform: translateY(5px) scale(1.02); }
-  70%  { transform: translateY(-2px) scale(0.99); }
-  85%  { transform: translateY(1px) scale(1.005); }
+  0%   { opacity: 0; transform: translateY(-40px) scale(0.9); }
+  40%  { opacity: 1; transform: translateY(8px) scale(1.05); }
+  55%  { transform: translateY(-4px) scale(0.98); }
+  70%  { transform: translateY(2px) scale(1.01); }
+  82%  { transform: translateY(-1px) scale(0.998); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes bounceInChar {
@@ -58,10 +59,10 @@ const KEYFRAMES_CSS = `
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes logoBounceIn {
-  0%   { opacity: 0; transform: scale(0.4) translateY(10px); }
-  60%  { opacity: 0.65; transform: scale(1.06) translateY(-1px); }
-  80%  { transform: scale(0.97) translateY(0.5px); }
-  100% { opacity: 0.65; transform: scale(1) translateY(0); }
+  0%   { opacity: 0; transform: translateY(12px) scale(0.85); }
+  50%  { opacity: 0.7; transform: translateY(-2px) scale(1.03); }
+  70%  { transform: translateY(1px) scale(0.99); }
+  100% { opacity: 0.7; transform: scale(1) translateY(0); }
 }
 @keyframes radialPulse {
   0%   { opacity: 1; transform: scale(0); }
@@ -82,7 +83,6 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   const phase1Ref = useRef<HTMLDivElement>(null)
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([])
   const levelUnderlineRef = useRef<HTMLSpanElement>(null)
-  const trustedByRef = useRef<HTMLDivElement>(null)
   const logoRefs = useRef<(HTMLImageElement | null)[]>([])
 
   // Phase 2 refs
@@ -140,7 +140,6 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     const phase1 = phase1Ref.current
     const phase2 = phase2Ref.current
     const levelUnderline = levelUnderlineRef.current
-    const trustedBy = trustedByRef.current
     const bar1 = bar1Ref.current
     const bar2 = bar2Ref.current
     const bar3 = bar3Ref.current
@@ -150,7 +149,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     const radialPulse = radialPulseRef.current
 
     if (
-      !phase1 || !phase2 || !levelUnderline || !trustedBy ||
+      !phase1 || !phase2 || !levelUnderline ||
       !bar1 || !bar2 || !bar3 || !barsGroup ||
       !media || !ironContainer || !radialPulse
     ) return
@@ -163,17 +162,16 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     wordRefs.current.forEach((el) => {
       if (!el) return
       el.style.opacity = '0'
-      el.style.transform = 'translateY(-25px) scale(0.95)'
+      el.style.transform = 'translateY(-40px) scale(0.9)'
     })
 
     levelUnderline.style.transform = 'scaleX(0)'
     levelUnderline.style.transformOrigin = 'left center'
-    trustedBy.style.opacity = '0'
 
     logoRefs.current.forEach((el) => {
       if (!el) return
       el.style.opacity = '0'
-      el.style.transform = 'scale(0.4) translateY(10px)'
+      el.style.transform = 'translateY(12px) scale(0.85)'
     })
 
     // Phase 2: hidden
@@ -199,7 +197,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     radialPulse.style.transform = 'scale(0)'
 
     // ═══════════════════════════════════════════
-    // PHASE 1: Statement + Trusted By (T=0 -> T=2900ms)
+    // PHASE 1: Statement + Brands (T=0 -> T=2900ms)
     // ═══════════════════════════════════════════
 
     // Word-by-word Pixar bounce
@@ -207,7 +205,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       schedule(() => {
         const el = wordRefs.current[i]
         if (!el) return
-        el.style.animation = `wordBounce 500ms ${EASE_BOUNCY} forwards`
+        el.style.animation = `wordBounce 600ms ${EASE_BOUNCY} forwards`
       }, WORD_TIMINGS[i])
     })
 
@@ -217,19 +215,13 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       levelUnderline.style.transform = 'scaleX(1)'
     }, 1200)
 
-    // T=1600ms: "TRUSTED BY LEADING BRANDS" fades in
-    schedule(() => {
-      trustedBy.style.transition = 'opacity 400ms ease-out'
-      trustedBy.style.opacity = '0.5'
-    }, 1600)
-
-    // T=1800ms: Brand logos bounce in with stagger (80ms apart)
+    // T=1800ms: Brand logos bounce in with stagger (60ms apart)
     INTRO_BRANDS.forEach((_, i) => {
       schedule(() => {
         const el = logoRefs.current[i]
         if (!el) return
-        el.style.animation = `logoBounceIn 450ms ${EASE_BOUNCY} forwards`
-      }, 1800 + i * 80)
+        el.style.animation = `logoBounceIn 400ms ${EASE_BOUNCY} forwards`
+      }, 1800 + i * 60)
     })
 
     // T=2900ms: Everything fades out + scale(0.98)
@@ -429,6 +421,9 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   const row1Words = PHASE1_WORDS.filter((w) => w.row === 1)
   const row2Words = PHASE1_WORDS.filter((w) => w.row === 2)
 
+  const brandsRow1 = INTRO_BRANDS.slice(0, 6)
+  const brandsRow2 = INTRO_BRANDS.slice(6, 12)
+
   const renderWord = (
     word: (typeof PHASE1_WORDS)[number],
     globalIndex: number,
@@ -473,6 +468,42 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     )
   }
 
+  const renderBrandRow = (brands: typeof INTRO_BRANDS, startIndex: number) => (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        gap: 'clamp(16px, 2.5vw, 32px)',
+        flexWrap: 'wrap',
+      }}
+    >
+      {brands.map((brand, i) => {
+        const globalIndex = startIndex + i
+        return (
+          <span
+            key={brand.name}
+            ref={(el) => {
+              logoRefs.current[globalIndex] = el as any
+            }}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: 'clamp(13px, 1.6vw, 17px)',
+              letterSpacing: '0.04em',
+              color: brand.color,
+              opacity: 0,
+              willChange: 'transform, opacity',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          >
+            {brand.name}
+          </span>
+        )
+      })}
+    </div>
+  )
+
   return (
     <div
       ref={overlayRef}
@@ -481,6 +512,11 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
         inset: 0,
         zIndex: 9999,
         background: COLORS.background,
+        backgroundImage: `
+          linear-gradient(rgba(46,154,196,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(46,154,196,0.03) 1px, transparent 1px)
+        `,
+        backgroundSize: '40px 40px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -491,7 +527,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       {/* Global keyframes */}
       <style>{KEYFRAMES_CSS}</style>
 
-      {/* ═══════ PHASE 1: Statement + Trusted By ═══════ */}
+      {/* ═══════ PHASE 1: Statement + Brands ═══════ */}
       <div
         ref={phase1Ref}
         style={{
@@ -548,55 +584,20 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
           </div>
         </div>
 
-        {/* TRUSTED BY LEADING BRANDS */}
-        <div
-          ref={trustedByRef}
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 500,
-            fontSize: '10px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.2em',
-            color: COLORS.textMuted,
-            marginTop: '32px',
-            willChange: 'opacity',
-          }}
-        >
-          TRUSTED BY LEADING BRANDS
-        </div>
-
-        {/* Brand logos row */}
+        {/* Brand logos - 2 rows of 6 */}
         <div
           style={{
+            maxWidth: '600px',
+            width: '100%',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 'clamp(20px, 3vw, 40px)',
-            marginTop: '16px',
-            flexWrap: 'wrap',
+            gap: '12px',
+            marginTop: '24px',
           }}
         >
-          {INTRO_BRANDS.map((brand, i) => (
-            <span
-              key={brand.name}
-              ref={(el) => {
-                logoRefs.current[i] = el as any
-              }}
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: 'clamp(14px, 1.8vw, 20px)',
-                letterSpacing: '0.04em',
-                color: brand.color,
-                opacity: 0,
-                willChange: 'transform, opacity',
-                pointerEvents: 'none',
-                userSelect: 'none',
-              }}
-            >
-              {brand.name}
-            </span>
-          ))}
+          {renderBrandRow(brandsRow1, 0)}
+          {renderBrandRow(brandsRow2, 6)}
         </div>
       </div>
 

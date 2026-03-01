@@ -4,6 +4,7 @@ import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import Navigation from '@/components/layout/Navigation'
 import Hero from '@/components/sections/Hero'
+import CaseStudies from '@/components/sections/CaseStudies'
 
 const IntroAnimation = dynamic(() => import('@/components/intro/IntroAnimation'), {
   ssr: false,
@@ -20,6 +21,7 @@ export default function Home() {
       <Navigation />
       <main className="relative">
         <Hero introComplete={introComplete} />
+        <CaseStudies />
       </main>
     </>
   )

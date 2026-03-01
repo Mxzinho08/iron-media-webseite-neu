@@ -209,3 +209,25 @@ body {
 section[id] {
   scroll-margin-top: 80px;
 }
+
+/* === CASE STUDIES DARK SECTION === */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.chart-line-draw {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.chart-line-draw.visible {
+  stroke-dashoffset: 0;
+}
+
+.text-gradient-white-blue {
+  background: linear-gradient(180deg, #FFFFFF 0%, #56B8DE 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

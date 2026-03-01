@@ -24,7 +24,7 @@ const COLORS = {
   textMuted: '#94A3B8',
 } as const
 
-const EASE_BOUNCY = 'cubic-bezier(0.22, 1.4, 0.36, 1)'
+const EASE_BOUNCY = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const EASE_FADE = 'cubic-bezier(0.4, 0, 0.2, 1)'
 const EASE_OUT_EXPO = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const EASE_MEDIA = 'cubic-bezier(0.25, 1, 0.5, 1)'
@@ -45,24 +45,19 @@ const WORD_TIMINGS = [400, 500, 600, 700, 850, 950, 1050]
 
 const KEYFRAMES_CSS = `
 @keyframes wordBounce {
-  0%   { opacity: 0; transform: translateY(-40px) scale(0.9); }
-  40%  { opacity: 1; transform: translateY(8px) scale(1.05); }
-  55%  { transform: translateY(-4px) scale(0.98); }
-  70%  { transform: translateY(2px) scale(1.01); }
-  82%  { transform: translateY(-1px) scale(0.998); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0%   { opacity: 0; transform: translateY(-20px); }
+  65%  { opacity: 1; transform: translateY(2px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 @keyframes bounceInChar {
-  0%   { opacity: 0; transform: translateY(-15px) scale(0.97); }
-  60%  { opacity: 1; transform: translateY(2px) scale(1.01); }
-  80%  { transform: translateY(-1px) scale(0.995); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0%   { opacity: 0; transform: translateY(-12px); }
+  65%  { opacity: 1; transform: translateY(1px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 @keyframes logoBounceIn {
-  0%   { opacity: 0; transform: translateY(12px) scale(0.85); }
-  50%  { opacity: 0.7; transform: translateY(-2px) scale(1.03); }
-  70%  { transform: translateY(1px) scale(0.99); }
-  100% { opacity: 0.7; transform: scale(1) translateY(0); }
+  0%   { opacity: 0; transform: translateY(8px) scale(0.96); }
+  65%  { opacity: 1; transform: translateY(-1px) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes radialPulse {
   0%   { opacity: 1; transform: scale(0); }
@@ -162,7 +157,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     wordRefs.current.forEach((el) => {
       if (!el) return
       el.style.opacity = '0'
-      el.style.transform = 'translateY(-40px) scale(0.9)'
+      el.style.transform = 'translateY(-20px)'
     })
 
     levelUnderline.style.transform = 'scaleX(0)'
@@ -171,7 +166,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     logoRefs.current.forEach((el) => {
       if (!el) return
       el.style.opacity = '0'
-      el.style.transform = 'translateY(12px) scale(0.85)'
+      el.style.transform = 'translateY(8px) scale(0.96)'
     })
 
     // Phase 2: hidden
@@ -205,7 +200,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       schedule(() => {
         const el = wordRefs.current[i]
         if (!el) return
-        el.style.animation = `wordBounce 600ms ${EASE_BOUNCY} forwards`
+        el.style.animation = `wordBounce 400ms ${EASE_BOUNCY} forwards`
       }, WORD_TIMINGS[i])
     })
 
@@ -215,13 +210,13 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       levelUnderline.style.transform = 'scaleX(1)'
     }, 1200)
 
-    // T=1800ms: Brand logos bounce in with stagger (60ms apart)
+    // T=1800ms: Brand logos bounce in with stagger (50ms apart)
     INTRO_BRANDS.forEach((_, i) => {
       schedule(() => {
         const el = logoRefs.current[i]
         if (!el) return
-        el.style.animation = `logoBounceIn 400ms ${EASE_BOUNCY} forwards`
-      }, 1800 + i * 60)
+        el.style.animation = `logoBounceIn 350ms ${EASE_BOUNCY} forwards`
+      }, 1800 + i * 50)
     })
 
     // T=2900ms: Everything fades out + scale(0.98)
@@ -416,7 +411,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   // RENDER
   // ─────────────────────────────────────────────
 
-  const baseFontSize = 'clamp(24px, 3.5vw, 44px)'
+  const baseFontSize = 'clamp(28px, 4.2vw, 52px)'
 
   const row1Words = PHASE1_WORDS.filter((w) => w.row === 1)
   const row2Words = PHASE1_WORDS.filter((w) => w.row === 2)
@@ -433,8 +428,8 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     const wordStyle: React.CSSProperties = {
       display: 'inline-block',
       fontFamily: isLevel ? 'var(--font-accent)' : 'var(--font-display)',
-      fontWeight: isLevel ? 400 : 700,
-      fontSize: isLevel ? '130%' : undefined,
+      fontWeight: isLevel ? 400 : 900,
+      fontSize: isLevel ? '145%' : undefined,
       position: isLevel ? 'relative' : undefined,
       opacity: 0,
       willChange: 'transform, opacity',
@@ -473,32 +468,56 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       style={{
         display: 'flex',
         justifyContent: 'center',
-        gap: 'clamp(16px, 2.5vw, 32px)',
+        gap: '8px',
         flexWrap: 'wrap',
       }}
     >
       {brands.map((brand, i) => {
         const globalIndex = startIndex + i
         return (
-          <span
+          <div
             key={brand.name}
             ref={(el) => {
               logoRefs.current[globalIndex] = el as any
             }}
             style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              fontSize: 'clamp(13px, 1.6vw, 17px)',
-              letterSpacing: '0.04em',
-              color: brand.color,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 10px 5px 6px',
+              borderRadius: '6px',
+              background: `${brand.color}0D`,
+              border: `1px solid ${brand.color}1A`,
               opacity: 0,
               willChange: 'transform, opacity',
               pointerEvents: 'none',
               userSelect: 'none',
             }}
           >
-            {brand.name}
-          </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${brand.domain}&sz=128`}
+              alt=""
+              width={16}
+              height={16}
+              style={{ borderRadius: '3px', display: 'block' }}
+              loading="eager"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: '11px',
+                letterSpacing: '0.02em',
+                color: brand.color,
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {brand.name}
+            </span>
+          </div>
         )
       })}
     </div>
@@ -587,13 +606,13 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
         {/* Brand logos - 2 rows of 6 */}
         <div
           style={{
-            maxWidth: '600px',
+            maxWidth: '750px',
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '12px',
-            marginTop: '24px',
+            gap: '8px',
+            marginTop: '28px',
           }}
         >
           {renderBrandRow(brandsRow1, 0)}

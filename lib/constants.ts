@@ -45,18 +45,18 @@ export const NAV_ITEMS = [
 ]
 
 export const INTRO_BRANDS = [
-  { name: 'SNOCKS', color: '#000000' },
-  { name: 'HOLY', color: '#1DB954' },
-  { name: 'PURELEI', color: '#C8A97E' },
-  { name: 'JUNGLÜCK', color: '#2D5016' },
-  { name: 'WATERDROP', color: '#00B4D8' },
-  { name: 'YFood', color: '#FF6B35' },
-  { name: 'PAUL HEWITT', color: '#1A1A1A' },
-  { name: 'KAPTEN & SON', color: '#1A1A1A' },
-  { name: 'ANKERKRAUT', color: '#C4232B' },
-  { name: 'KoRo', color: '#004D40' },
-  { name: 'ROSSMANN', color: '#E30613' },
-  { name: 'Bears With Benefits', color: '#FF69B4' },
+  { name: 'SNOCKS', color: '#000000', domain: 'snocks.com' },
+  { name: 'HOLY', color: '#1DB954', domain: 'holy.com' },
+  { name: 'PURELEI', color: '#C8A97E', domain: 'purelei.com' },
+  { name: 'JUNGLÜCK', color: '#2D5016', domain: 'junglueck.de' },
+  { name: 'WATERDROP', color: '#00B4D8', domain: 'waterdrop.com' },
+  { name: 'YFood', color: '#FF6B35', domain: 'yfood.eu' },
+  { name: 'PAUL HEWITT', color: '#1A1A1A', domain: 'paul-hewitt.com' },
+  { name: 'KAPTEN & SON', color: '#1A1A1A', domain: 'kapten-son.com' },
+  { name: 'ANKERKRAUT', color: '#C4232B', domain: 'ankerkraut.de' },
+  { name: 'KoRo', color: '#004D40', domain: 'korodrogerie.de' },
+  { name: 'ROSSMANN', color: '#E30613', domain: 'rossmann.de' },
+  { name: 'Bears With Benefits', color: '#FF69B4', domain: 'bearswithbenefits.com' },
 ]
 
 export const TRUSTED_BRANDS = [

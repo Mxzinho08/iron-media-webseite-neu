@@ -149,9 +149,12 @@ void main() {
       cos(t * 0.9 + float(i) * 2.3) * 0.025 + cos(t * 0.35 + float(i) * 1.2) * 0.015
     );
     vec2 pos = positions[i] + moveOff;
-    float rot = uTime * rotSpeeds[i];
-    vec4 group = logoGroup(p, pos, scales[i], rot, glows[i]);
-    finalColor = mix(finalColor, group.rgb, group.a * 0.9);
+    float cull = scales[i] * 0.05;
+    if (abs(p.x - pos.x) < cull && abs(p.y - pos.y) < cull) {
+      float rot = uTime * rotSpeeds[i];
+      vec4 group = logoGroup(p, pos, scales[i], rot, glows[i]);
+      finalColor = mix(finalColor, group.rgb, group.a * 0.9);
+    }
   }
 
   gl_FragColor = vec4(finalColor, 1.0);
@@ -232,11 +235,15 @@ function LiquidGlassCanvas({ show }: { show: boolean }) {
 
       // Animation loop
       const startTime = performance.now()
+      let lastRender = 0
       const animate = () => {
         if (disposedRef.current) return
         animationId = requestAnimationFrame(animate)
+        const now = performance.now()
+        if (now - lastRender < 33) return
+        lastRender = now
 
-        uniforms.uTime.value = (performance.now() - startTime) / 1000
+        uniforms.uTime.value = (now - startTime) / 1000
 
         renderer.render(scene, camera)
       }

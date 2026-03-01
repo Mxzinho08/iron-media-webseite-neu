@@ -5,27 +5,34 @@ import { motion } from 'framer-motion'
 import { TRUSTED_LOGOS } from '@/lib/constants'
 
 /* ============================================
-   IRON MEDIA — HERO v5.4
+   IRON MEDIA — HERO v5.5
    Animated bars + Shopify sale notifications
    + metric bubbles + floating text (no card)
+   + full-width marquee trusted-by
    ============================================ */
 
 const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1]
 
-/* ---------- Shopify sale notifications (LEFT upper half) ---------- */
+/* ---------- Shopify sale notifications (LEFT upper half) — 7 items ---------- */
 
 const SHOPIFY_NOTIFICATIONS = [
   { text: '+100 Sales', subtext: 'Today' },
   { text: '+10k Revenue', subtext: 'Today' },
   { text: '+500', subtext: 'Today' },
   { text: '+20k Sales', subtext: 'This month' },
+  { text: '+250 Bestellungen', subtext: 'Heute' },
+  { text: '+€45k Revenue', subtext: 'This week' },
+  { text: '+1.2k Orders', subtext: 'This week' },
 ]
 
 const SHOPIFY_ZONES = [
-  { x: [0.02, 0.20], y: [0.03, 0.18] },
-  { x: [0.24, 0.45], y: [0.05, 0.20] },
-  { x: [0.04, 0.22], y: [0.22, 0.40] },
-  { x: [0.26, 0.45], y: [0.24, 0.40] },
+  { x: [0.02, 0.18], y: [0.06, 0.16] },
+  { x: [0.20, 0.38], y: [0.06, 0.16] },
+  { x: [0.03, 0.20], y: [0.18, 0.28] },
+  { x: [0.22, 0.42], y: [0.18, 0.28] },
+  { x: [0.02, 0.18], y: [0.30, 0.40] },
+  { x: [0.20, 0.38], y: [0.30, 0.40] },
+  { x: [0.10, 0.30], y: [0.08, 0.22] },
 ]
 
 /* ---------- Metric bubbles (RIGHT upper half) ---------- */
@@ -54,36 +61,14 @@ const BUBBLE_SIZES: ('sm' | 'md' | 'lg')[] = [
   'md', 'lg', 'sm', 'md', 'sm', 'lg', 'md',
 ]
 
-/* ---------- Shopify bag SVG icon ---------- */
+/* ---------- Official Shopify bag SVG icon ---------- */
 
-function ShopifyBagIcon({ size = 20 }: { size?: number }) {
+function ShopifyBagIcon({ size = 22 }: { size?: number }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M15.5 6.5C15.5 4.29 13.71 2.5 11.5 2.5C9.29 2.5 7.5 4.29 7.5 6.5"
-        stroke="#5CBB5C"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M5.5 8.5H17.5L18.5 21.5H4.5L5.5 8.5Z"
-        fill="#5CBB5C"
-        stroke="#5CBB5C"
-        strokeWidth="0.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M15.5 6.5C15.5 4.29 13.71 2.5 11.5 2.5C9.29 2.5 7.5 4.29 7.5 6.5"
-        stroke="white"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
+    <svg width={size} height={size} viewBox="0 0 109.5 124.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M95.9 23.9c-.1-.7-.5-1-1.1-1.1-.5 0-10.2-.8-10.2-.8s-6.7-6.7-7.5-7.5c-.8-.8-2.3-.5-2.9-.4-.1 0-1.5.5-4 1.2C68 8.8 64.5 2.5 56.1 2.5h-.8C53.4.8 51.2 0 49.3 0 33.9 0 26.5 19.2 24.2 29c-6 1.8-10.2 3.2-10.7 3.3-3.3 1-3.4 1.1-3.8 4.3C9.4 39 0 112.3 0 112.3l75.8 13.1 40.7-10s-.1-.4-.1-.5c0 0-20.4-90.3-20.5-91zm-30.5-6.2c-1.9.6-4.1 1.3-6.5 2V17c0-3.2-.4-5.8-1.1-7.9 2.7.5 4.6 3.5 5.6 8.6zm-10.6-7.7c.8 2 1.2 4.9 1.2 8.8v.7c-4.2 1.3-8.7 2.7-13.2 4.1C45.3 14.6 50 9.6 54.8 10zm-5-7.5c.6 0 1.2.2 1.7.6-6.4 3-13.2 11.2-16.1 27.2-3.6 1.1-7 2.2-10.2 3.1C28.2 20.8 34.8 2.5 49.8 2.5z" fill="#95BF47"/>
+      <path d="M94.8 22.8c-.5 0-10.2-.8-10.2-.8s-6.7-6.7-7.5-7.5c-.3-.3-.6-.4-1-.4l-1.3 96.2 40.7-10S95 23.5 94.8 22.8z" fill="#5E8E3E"/>
+      <path d="M56.1 39.2l-4.8 14.3s-4.2-2.2-9.3-2.2c-7.5 0-7.9 4.7-7.9 5.9 0 6.5 16.9 9 16.9 24.2 0 12-7.6 19.7-17.8 19.7-12.3 0-18.6-7.6-18.6-7.6l3.3-10.9s6.5 5.6 12 5.6c3.6 0 5.1-2.8 5.1-4.9 0-8.5-13.9-8.9-13.9-22.8C21.1 49.1 30 36.6 46 36.6c6.2 0 10.1 1.6 10.1 2.6z" fill="white"/>
     </svg>
   )
 }
@@ -176,12 +161,12 @@ function AnimatedBars({ show }: { show: boolean }) {
         const barY = chartBottom - barH
         const radius = Math.min(barWidth * 0.4, 6)
 
-        // Blue gradient fill
+        // Blue gradient fill — increased visibility
         const grad = ctx.createLinearGradient(x, chartBottom, x, barY)
-        grad.addColorStop(0, 'rgba(46,154,196,0.02)')
-        grad.addColorStop(0.4, 'rgba(46,154,196,0.05)')
-        grad.addColorStop(0.7, 'rgba(86,184,222,0.07)')
-        grad.addColorStop(1, 'rgba(86,184,222,0.10)')
+        grad.addColorStop(0, 'rgba(46,154,196,0.03)')
+        grad.addColorStop(0.4, 'rgba(46,154,196,0.07)')
+        grad.addColorStop(0.7, 'rgba(86,184,222,0.10)')
+        grad.addColorStop(1, 'rgba(86,184,222,0.14)')
 
         ctx.fillStyle = grad
 
@@ -259,12 +244,12 @@ function ShopifyBubbles({ show }: { show: boolean }) {
       states.push({
         baseX: zone.x[0] + Math.random() * (zone.x[1] - zone.x[0]),
         baseY: zone.y[0] + Math.random() * (zone.y[1] - zone.y[0]),
-        speedX: 0.25 + Math.random() * 0.4,
-        speedY: 0.2 + Math.random() * 0.35,
+        speedX: 0.05 + Math.random() * 0.07,
+        speedY: 0.04 + Math.random() * 0.06,
         phaseX: Math.random() * Math.PI * 2,
         phaseY: Math.random() * Math.PI * 2,
-        amplitudeX: 6 + Math.random() * 12,
-        amplitudeY: 5 + Math.random() * 10,
+        amplitudeX: 2 + Math.random() * 2,
+        amplitudeY: 1.5 + Math.random() * 2,
         entranceDelay: 800 + i * 200,
       })
     }
@@ -308,12 +293,16 @@ function ShopifyBubbles({ show }: { show: boolean }) {
         const lissX = Math.sin(t * st.speedX + st.phaseX) * st.amplitudeX
         const lissY = Math.cos(t * st.speedY + st.phaseY) * st.amplitudeY
 
-        const parallaxStrength = 12
+        const parallaxStrength = 3
         const parallaxX = (mx - 0.5) * parallaxStrength * (i % 2 === 0 ? 1 : -0.6)
         const parallaxY = (my - 0.5) * parallaxStrength * (i % 2 === 0 ? -0.6 : 1)
 
-        const finalX = st.baseX * w + lissX + parallaxX
-        const finalY = st.baseY * h + lissY + parallaxY
+        let finalX = st.baseX * w + lissX + parallaxX
+        let finalY = st.baseY * h + lissY + parallaxY
+
+        // Clamp: left bubbles stay in [0, w*0.45], y in [h*0.06, h*0.42]
+        finalX = Math.max(0, Math.min(w * 0.45, finalX))
+        finalY = Math.max(h * 0.06, Math.min(h * 0.42, finalY))
 
         el.style.transform = `translate3d(${finalX}px, ${finalY}px, 0)`
         el.style.opacity = String(fadeIn * 0.92)
@@ -357,7 +346,7 @@ function ShopifyBubbles({ show }: { show: boolean }) {
             WebkitBackdropFilter: 'blur(20px)',
             border: '1px solid rgba(255,255,255,0.95)',
             boxShadow:
-              '0 2px 8px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.5)',
+              '0 0 24px rgba(46,154,196,0.10), 0 4px 20px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5)',
             willChange: 'transform',
             pointerEvents: 'none',
             userSelect: 'none',
@@ -377,7 +366,7 @@ function ShopifyBubbles({ show }: { show: boolean }) {
               flexShrink: 0,
             }}
           >
-            <ShopifyBagIcon size={20} />
+            <ShopifyBagIcon size={22} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <span
@@ -444,12 +433,12 @@ function MetricBubbles({ show }: { show: boolean }) {
       states.push({
         baseX: zone.x[0] + Math.random() * (zone.x[1] - zone.x[0]),
         baseY: zone.y[0] + Math.random() * (zone.y[1] - zone.y[0]),
-        speedX: 0.3 + Math.random() * 0.5,
-        speedY: 0.2 + Math.random() * 0.4,
+        speedX: 0.05 + Math.random() * 0.07,
+        speedY: 0.04 + Math.random() * 0.06,
         phaseX: Math.random() * Math.PI * 2,
         phaseY: Math.random() * Math.PI * 2,
-        amplitudeX: 8 + Math.random() * 16,
-        amplitudeY: 6 + Math.random() * 12,
+        amplitudeX: 2 + Math.random() * 2,
+        amplitudeY: 1.5 + Math.random() * 2,
         entranceDelay: 900 + i * 150,
       })
     }
@@ -493,12 +482,16 @@ function MetricBubbles({ show }: { show: boolean }) {
         const lissX = Math.sin(t * st.speedX + st.phaseX) * st.amplitudeX
         const lissY = Math.cos(t * st.speedY + st.phaseY) * st.amplitudeY
 
-        const parallaxStrength = 15
+        const parallaxStrength = 3
         const parallaxX = (mx - 0.5) * parallaxStrength * (i % 2 === 0 ? 1 : -0.6)
         const parallaxY = (my - 0.5) * parallaxStrength * (i % 2 === 0 ? -0.6 : 1)
 
-        const finalX = st.baseX * w + lissX + parallaxX
-        const finalY = st.baseY * h + lissY + parallaxY
+        let finalX = st.baseX * w + lissX + parallaxX
+        let finalY = st.baseY * h + lissY + parallaxY
+
+        // Clamp: right bubbles stay in [w*0.55, w-100], y in [h*0.06, h*0.42]
+        finalX = Math.max(w * 0.55, Math.min(w - 100, finalX))
+        finalY = Math.max(h * 0.06, Math.min(h * 0.42, finalY))
 
         el.style.transform = `translate3d(${finalX}px, ${finalY}px, 0)`
         el.style.opacity = String(fadeIn * 0.9)
@@ -549,7 +542,7 @@ function MetricBubbles({ show }: { show: boolean }) {
               WebkitBackdropFilter: 'blur(20px)',
               border: '1px solid rgba(255,255,255,0.9)',
               boxShadow:
-                '0 2px 8px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.5)',
+                '0 0 24px rgba(46,154,196,0.10), 0 4px 20px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5)',
               willChange: 'transform',
               pointerEvents: 'none',
               userSelect: 'none',
@@ -707,7 +700,7 @@ function ScrollIndicator({ show }: { show: boolean }) {
     <div
       style={{
         position: 'absolute',
-        bottom: 24,
+        bottom: 140,
         left: '50%',
         transform: 'translateX(-50%)',
         display: 'flex',
@@ -744,65 +737,7 @@ function ScrollIndicator({ show }: { show: boolean }) {
 }
 
 /* ============================================
-   TRUSTED LOGO — with fallback text
-   ============================================ */
-
-function TrustedLogo({ logo }: { logo: { name: string; domain: string } }) {
-  const [failed, setFailed] = useState(false)
-
-  if (failed) {
-    return (
-      <span
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 600,
-          fontSize: 12,
-          letterSpacing: '0.04em',
-          color: '#94A3B8',
-          opacity: 0.5,
-          transition: 'opacity 0.3s ease',
-          cursor: 'default',
-          userSelect: 'none',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.opacity = '0.8'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.opacity = '0.5'
-        }}
-      >
-        {logo.name}
-      </span>
-    )
-  }
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={`https://logo.clearbit.com/${logo.domain}`}
-      alt={logo.name}
-      crossOrigin="anonymous"
-      style={{
-        height: 24,
-        opacity: 0.4,
-        filter: 'grayscale(100%)',
-        transition: 'opacity 0.3s ease, filter 0.3s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.opacity = '0.7'
-        e.currentTarget.style.filter = 'grayscale(0%)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.opacity = '0.4'
-        e.currentTarget.style.filter = 'grayscale(100%)'
-      }}
-      onError={() => setFailed(true)}
-    />
-  )
-}
-
-/* ============================================
-   HERO COMPONENT — v5.4
+   HERO COMPONENT — v5.5
    ============================================ */
 
 const HEADLINE_WORDS = ['Wir', 'skalieren', 'deine', 'E-Com-Marke']
@@ -843,6 +778,7 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        paddingBottom: 120,
       }}
     >
       <style>{`
@@ -853,6 +789,10 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
         @keyframes scrollBounce {
           0%, 100% { top: 4px; }
           50% { top: 28px; }
+        }
+        @keyframes marqueeScroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
         }
       `}</style>
 
@@ -873,6 +813,17 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
           maskImage:
             'radial-gradient(ellipse 80% 70% at 50% 55%, black 30%, transparent 80%)',
           pointerEvents: 'none',
+        }}
+      />
+
+      {/* Layer 0.5 — Soft blue glow */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(46,154,196,0.06) 0%, rgba(86,184,222,0.03) 30%, transparent 70%)',
+          pointerEvents: 'none',
+          zIndex: 0,
         }}
       />
 
@@ -902,46 +853,6 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
           textAlign: 'center',
         }}
       >
-        {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={show ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, delay: 0.6, ease: EASE_OUT_EXPO }}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '6px 14px',
-            background: 'rgba(46,154,196,0.06)',
-            border: '1px solid rgba(46,154,196,0.1)',
-            borderRadius: 100,
-            marginBottom: 28,
-          }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: '#5CBB5C',
-              flexShrink: 0,
-              animation: 'pulse 2s ease-in-out infinite',
-            }}
-          />
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              fontWeight: 400,
-              letterSpacing: '0.2em',
-              textTransform: 'uppercase' as const,
-              color: '#2E9AC4',
-            }}
-          >
-            E-COMMERCE GROWTH PARTNER &middot; &euro;10M+ MONTHLY AD SPEND
-          </span>
-        </motion.div>
-
         {/* Headline — "Wir skalieren deine E-Com-Marke" all same font */}
         <h1
           style={{
@@ -1044,44 +955,87 @@ export default function Hero({ introComplete }: { introComplete: boolean }) {
         </motion.div>
       </div>
 
-      {/* Trusted By logos */}
+      {/* Trusted By — Full-width marquee */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={show ? { opacity: 1 } : {}}
-        transition={{ duration: 0.6, delay: 2.0, ease: EASE_OUT_EXPO }}
+        transition={{ duration: 0.6, delay: 1.8, ease: EASE_OUT_EXPO }}
         style={{
-          position: 'relative',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
           zIndex: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          marginTop: 40,
-          gap: 16,
+          borderTop: '1px solid rgba(226,232,240,0.8)',
+          background: 'rgba(255,255,255,0.8)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          padding: '20px 0',
         }}
       >
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase' as const,
-            color: '#94A3B8',
-          }}
-        >
+        <p style={{
+          textAlign: 'center',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.15em',
+          textTransform: 'uppercase',
+          color: '#94A3B8',
+          margin: '0 0 14px 0',
+        }}>
           Trusted by leading brands
-        </span>
-        <div
-          style={{
+        </p>
+        <div style={{ overflow: 'hidden', width: '100%' }}>
+          <div style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: 24,
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-          }}
-        >
-          {TRUSTED_LOGOS.map((logo) => (
-            <TrustedLogo key={logo.name} logo={logo} />
-          ))}
+            animation: 'marqueeScroll 30s linear infinite',
+            width: 'max-content',
+          }}>
+            {/* Duplicate logos for seamless loop */}
+            {[...TRUSTED_LOGOS, ...TRUSTED_LOGOS].map((logo, i) => (
+              <div
+                key={`logo-${i}`}
+                style={{
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px 28px',
+                  marginRight: 16,
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: 12,
+                  minWidth: 120,
+                  height: 56,
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://logo.clearbit.com/${logo.domain}`}
+                  alt={logo.name}
+                  crossOrigin="anonymous"
+                  style={{
+                    height: 28,
+                    maxWidth: 100,
+                    objectFit: 'contain',
+                  }}
+                  onError={(e) => {
+                    // Fallback to text
+                    const parent = e.currentTarget.parentElement
+                    if (parent) {
+                      e.currentTarget.style.display = 'none'
+                      const span = document.createElement('span')
+                      span.textContent = logo.name
+                      span.style.fontFamily = 'var(--font-display)'
+                      span.style.fontWeight = '600'
+                      span.style.fontSize = '13px'
+                      span.style.color = '#64748B'
+                      parent.appendChild(span)
+                    }
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </motion.div>
 

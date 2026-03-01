@@ -1,10 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import ScrollReveal from '@/components/ui/ScrollReveal'
 import { MEDIA_APPEARANCES } from '@/lib/constants'
 
 /* ============================================
-   IRON MEDIA — FEATURED IN v5.4
+   IRON MEDIA — FEATURED IN v5.5
    Podcast & Video Appearance Cards
    ============================================ */
 
@@ -89,6 +90,63 @@ function MiniBars() {
   )
 }
 
+/* ─── Thumbnail Fallback ─── */
+function ThumbnailFallback({ podcastName }: { podcastName: string }) {
+  return (
+    <div style={{
+      position: 'absolute',
+      inset: 0,
+      background: 'linear-gradient(135deg, #F4F7FA 0%, rgba(46,154,196,0.08) 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px',
+    }}>
+      {/* Mini decorative bars */}
+      <MiniBars />
+      {/* Podcast name as large styled text */}
+      <span style={{
+        fontFamily: 'var(--font-display)',
+        fontWeight: 700,
+        fontSize: 18,
+        color: '#1A1A2E',
+        textAlign: 'center',
+        opacity: 0.15,
+        letterSpacing: '-0.02em',
+        lineHeight: 1.2,
+        position: 'relative',
+        zIndex: 2,
+        maxWidth: '80%',
+      }}>
+        {podcastName}
+      </span>
+    </div>
+  )
+}
+
+/* ─── Thumbnail Image with fallback ─── */
+function ThumbnailImage({ src, alt, podcastName }: { src: string; alt: string; podcastName: string }) {
+  const [failed, setFailed] = useState(false)
+
+  if (failed) return <ThumbnailFallback podcastName={podcastName} />
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setFailed(true)}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+      }}
+    />
+  )
+}
+
 /* ─── Background Growth Curve SVG ─── */
 function BackgroundCurve() {
   return (
@@ -141,6 +199,7 @@ function AppearanceCard({
     platform: string
     url?: string
     description: string
+    thumbnail?: string
   }
 }) {
   const platformStyle = getPlatformStyle(item.platform)
@@ -189,13 +248,17 @@ function AppearanceCard({
           position: 'relative',
           width: '100%',
           aspectRatio: '16 / 9',
-          background: 'linear-gradient(135deg, #F4F7FA 0%, rgba(46,154,196,0.04) 100%)',
           overflow: 'hidden',
           flexShrink: 0,
+          background: 'linear-gradient(135deg, #F4F7FA 0%, rgba(46,154,196,0.08) 100%)',
         }}
       >
-        {/* Mini decorative bars */}
-        <MiniBars />
+        {/* Thumbnail image or styled fallback */}
+        {item.thumbnail ? (
+          <ThumbnailImage src={item.thumbnail} alt={item.title} podcastName={item.podcast} />
+        ) : (
+          <ThumbnailFallback podcastName={item.podcast} />
+        )}
 
         {/* Play button */}
         <PlayButton />

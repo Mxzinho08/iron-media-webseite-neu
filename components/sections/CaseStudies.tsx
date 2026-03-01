@@ -4,23 +4,47 @@ import {
   CaseVisual1,
   CaseVisual2,
   CaseVisual3,
-  CaseVisual4,
-  CaseVisual5,
-  CaseVisual6,
 } from '@/components/case-studies/CaseVisuals'
 import ScrollReveal from '@/components/ui/ScrollReveal'
 import AnimatedCounter from '@/components/ui/AnimatedCounter'
 import { AGGREGATE_METRICS, CASE_STUDIES } from '@/lib/constants'
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 
 /* ─── Visual component map ─── */
 const CASE_VISUALS: Record<number, ReactNode> = {
   1: <CaseVisual1 />,
   2: <CaseVisual2 />,
   3: <CaseVisual3 />,
-  4: <CaseVisual4 />,
-  5: <CaseVisual5 />,
-  6: <CaseVisual6 />,
+}
+
+/* ─── Brand Logo component with fallback ─── */
+function BrandLogo({ domain, brandName }: { domain: string; brandName: string }) {
+  const [hasError, setHasError] = useState(false)
+
+  if (hasError) {
+    return (
+      <span
+        style={{
+          fontFamily: 'var(--font-headline)',
+          fontWeight: 800,
+          fontSize: '18px',
+          color: '#1A1A2E',
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {brandName}
+      </span>
+    )
+  }
+
+  return (
+    <img
+      src={`https://logo.clearbit.com/${domain}`}
+      alt={`${brandName} logo`}
+      style={{ height: '40px', objectFit: 'contain' }}
+      onError={() => setHasError(true)}
+    />
+  )
 }
 
 /* ═══════════════════════════════════════════
@@ -181,7 +205,7 @@ export default function CaseStudies() {
             3. CASE STUDY CARDS
             ═══════════════════════════════════ */}
         {CASE_STUDIES.map((cs, idx) => {
-          const isEven = (idx + 1) % 2 === 0 // 1-based even: cards 2,4,6
+          const isEven = (idx + 1) % 2 === 0 // 1-based even: cards 2
           return (
             <ScrollReveal key={cs.id}>
               <div
@@ -198,6 +222,11 @@ export default function CaseStudies() {
                 >
                   {/* ── Text Side ── */}
                   <div className="flex-1 w-full">
+                    {/* Brand logo */}
+                    <div className="mb-6">
+                      <BrandLogo domain={cs.brandDomain} brandName={cs.brandName} />
+                    </div>
+
                     {/* Case number */}
                     <div className="flex items-center gap-4 mb-6">
                       <span
@@ -247,28 +276,9 @@ export default function CaseStudies() {
                       {cs.subtitle}
                     </p>
 
-                    {/* Accent phrase */}
-                    <p
-                      className="mt-6"
-                      style={{
-                        fontStyle: 'italic',
-                        fontSize: '20px',
-                        color: '#4A5568',
-                      }}
-                    >
-                      {cs.accentPhrase}{' '}
-                      <span
-                        style={{
-                          color: '#2E9AC4',
-                        }}
-                      >
-                        {cs.accentWord}
-                      </span>
-                    </p>
-
                     {/* Story */}
                     <p
-                      className="mt-4"
+                      className="mt-6"
                       style={{
                         fontSize: '15px',
                         lineHeight: 1.7,
@@ -279,33 +289,39 @@ export default function CaseStudies() {
                       {cs.story}
                     </p>
 
-                    {/* Quote (if exists) */}
-                    {'quote' in cs && cs.quote && (
-                      <blockquote
-                        className="mt-6 pl-4"
+                    {/* CEO Quote */}
+                    <blockquote
+                      className="mt-6 pl-4"
+                      style={{
+                        borderLeft: '3px solid #2E9AC4',
+                        maxWidth: '480px',
+                      }}
+                    >
+                      <p
                         style={{
-                          borderLeft: '2px solid #2E9AC4',
                           fontStyle: 'italic',
                           fontSize: '14px',
                           lineHeight: 1.7,
                           color: '#64748B',
-                          maxWidth: '480px',
                         }}
                       >
-                        <p>&ldquo;{(cs as typeof CASE_STUDIES[4]).quote!.text}&rdquo;</p>
-                        <footer
-                          className="mt-2"
-                          style={{
-                            fontStyle: 'normal',
-                            fontSize: '12px',
-                            color: '#94A3B8',
-                          }}
-                        >
-                          &mdash; {(cs as typeof CASE_STUDIES[4]).quote!.author},{' '}
-                          {(cs as typeof CASE_STUDIES[4]).quote!.platform}
-                        </footer>
-                      </blockquote>
-                    )}
+                        &ldquo;{cs.ceoQuote}&rdquo;
+                      </p>
+                      <footer
+                        className="mt-2"
+                        style={{
+                          fontStyle: 'normal',
+                          fontSize: '12px',
+                          color: '#94A3B8',
+                        }}
+                      >
+                        <span style={{ color: '#1A1A2E', fontWeight: 600 }}>
+                          {cs.ceoName}
+                        </span>
+                        {' — '}
+                        {cs.ceoTitle}
+                      </footer>
+                    </blockquote>
 
                     {/* Metric pills */}
                     <div className="flex gap-4 mt-8 flex-wrap">
